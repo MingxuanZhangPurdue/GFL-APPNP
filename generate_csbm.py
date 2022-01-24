@@ -51,10 +51,11 @@ class cSBM:
         self.v = v
         self.v_mask = v_mask
         self.A = A
-        #self.u = u
         self.p = p
         self.N = N
         self.mu = mu
+        self.d = d
+        self.l = l
         xi = N/p
         self.phi = np.arctan((l*np.sqrt(xi))/mu)*(2/np.pi)
         self.threshold = l**2 + (mu**2)/(N/p)
@@ -77,10 +78,10 @@ class cSBM:
         b = np.array(b)
         self.b = b
         
-    def generate_node_features(self, n_local, method, base_var=0.1):
+    def generate_node_features(self, n_local, method, base_var=0.05):
         
         # n_local: number of local data points for each node. 
-        
+        # Method: "GC", "SNC", "DNC".
         
         v = self.v
         p = self.p
@@ -91,43 +92,8 @@ class cSBM:
         
         self.Xs = []
         self.ys = []
-        
-        if method == "GC" or method == "General Classification":
-            
-            if not ((p-1) % 4 == 0):
-                raise ValueError("For this generation method to work, p-1 needs to be divisble by 4")
                 
-            bp = b[:,0]
-            bp = (bp-np.min(bp))/(np.max(bp)-np.min(bp)).reshape(-1)
-            self.bp = bp
-
-            mu0 = b[:, 1:int((p-1)/4)+1]
-            sigma0 = b[:,int((p-1)/4)+1:int((p-1)/2)+1]
-            sigma0 = sigma0 - np.amin(sigma0, axis=0) + base_var
-
-            mu1 = b[:,int((p-1)/2)+1:int(3*(p-1)/4)+1]
-            sigma1 = b[:,int(3*(p-1)/4)+1:]
-            sigma1 = sigma1 - np.amin(sigma1, axis=0) + base_var
-            
-            for i in range(N):
-                y = np.random.binomial(n=1, p=bp[i], size=n_local)
-                self.ys.append((torch.tensor(y).type(torch.LongTensor)))
-                               
-                X = []
-                
-                for j in range(n_local):
-                               
-                    if (y[j] == 0):
-                        X.append(np.random.multivariate_normal(mean=mu0[i],
-                                                                 cov=np.diag(sigma0[i])))
-                    else:
-                        X.append(np.random.multivariate_normal(mean=mu1[i],
-                                                     cov=np.diag(sigma1[i])))
-                               
-                X = np.array(X)
-                self.Xs.append((torch.from_numpy(X).type(torch.FloatTensor)))
-                
-        elif (method == "SNC" or method == "Stochastic Node Classification"):
+        if (method == "SNC" or method == "Stochastic Node Classification"):
             if not (p % 2 == 0):
                 raise ValueError("For this generation method to work, p needs to be an even number")
             for i in range(N):

@@ -6,71 +6,6 @@ import torch.nn.functional as F
 
 
 
-def train_FedMLP(server, num_communication, batch_size,
-            learning_rate=0.01, I=10, Print=False):
-    
-
-    train_losses, val_losses = [], []
-    train_accs, val_accs = [], []
-    
-    for ith in range(num_communication):
-        
-        train_loss, train_acc, val_loss, val_acc = server.communication(batch_size,
-                      learning_rate, I)
-        
-        train_losses.append(train_loss)
-        train_accs.append(train_acc)
-        
-        val_losses.append(val_loss)
-        val_accs.append(val_acc)
-        
-        if (Print):
-            print (f"Communication:", ith+1, "Average train loss:", train_loss, "train accuracy:", train_acc,
-                           "Average val loss:", val_loss, "val accuracy:", val_acc, flush=True)
-    return train_losses, train_accs, val_losses, val_accs
-
-
-def train_GC(server, 
-             num_communication, batch_size, learning_rate=0.01, I=10,
-             gradient=True, noise=False, 
-             update_method="weighted", 
-             Print=False,
-             checkpoint=None, tl=None, ta=None, vl=None, va=None):
-    
-    if checkpoint != None:
-        server.cmodel.load_state_dict(checkpoint)
-        train_losses, val_losses = tl.tolist(), vl.tolist()
-        train_accs, val_accs = ta.tolist(), va.tolist()
-        pre_n_communication = len(ta)
-
-    
-    else:
-        train_losses, val_losses = [], []
-        train_accs, val_accs = [], []
-        pre_n_communication = 0
-        
-    
-    for ith in range(num_communication):
-        
-        train_loss, train_acc, val_loss, val_acc = server.communication(batch_size,
-                      learning_rate, I, 
-                      gradient, noise, update_method)
-        
-        train_losses.append(train_loss)
-        train_accs.append(train_acc)
-        
-        val_losses.append(val_loss)
-        val_accs.append(val_acc)
-        
-        if (Print):
-            print (f"Communication:", ith+1+pre_n_communication, 
-                    "Average train loss:", "{:.5f}".format(train_loss), "Average train accuracy:", "{:.3f}".format(train_acc),
-                    "Average val loss:", "{:.5f}".format(val_loss), "Average val accuracy:", "{:.3f}".format(val_acc), flush=True)
-            
-    return train_losses, train_accs, val_losses, val_accs
-
-
-
 def train_NC(server, num_communication, 
              batch_size, learning_rate=0.1, I=10,
              gradient=True, noise=False, 
@@ -116,23 +51,16 @@ def train_pyg_model(pyg_data,
     
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
-    #model = model.to(device)
     data = pyg_data.to(device)
-    #optimizer = optim.SGD(model.parameters(), lr=learning_rate)
-    #optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    
     train_losses, train_accs, val_losses, val_accs = [], [], [], []
-    
     best_model = None
     best_valloss = np.inf
     best_valacc = 0
-    
     num_train = data.train_mask.sum() if mask else len(data.train_mask)
     num_val = data.val_mask.sum() if mask else len(data.val_mask)
     num_test = data.test_mask.sum() if mask else len(data.test_mask)
     
     model.train()
-    
     for epoch in range(num_epoch):
         optimizer.zero_grad()
         out = model(data)
