@@ -7,6 +7,31 @@ from torch_geometric.utils import to_networkx
 from torch_geometric.data import Data
 
 
+def kl_mvn(m0, S0, m1, S1):
+    """
+    Kullback-Liebler divergence from Gaussian pm,pv to Gaussian qm,qv.
+    Also computes KL divergence from a single Gaussian pm,pv to a set
+    of Gaussians qm,qv.
+    
+
+    From wikipedia
+    KL( (m0, S0) || (m1, S1))
+         = .5 * ( tr(S1^{-1} S0) + log |S1|/|S0| + 
+                  (m1 - m0)^T S1^{-1} (m1 - m0) - N )
+    """
+    # store inv diag covariance of S1 and diff between means
+    N = m0.shape[0]
+    iS1 = np.linalg.inv(S1)
+    diff = m1 - m0
+
+    # kl is made of three terms
+    tr_term   = np.trace(iS1 @ S0)
+    det_term  = np.log(np.linalg.det(S1)/np.linalg.det(S0)) #np.sum(np.log(S1)) - np.sum(np.log(S0))
+    quad_term = diff.T @ np.linalg.inv(S1) @ diff #np.sum( (diff*diff) * iS1, axis=1)
+    #print(tr_term,det_term,quad_term)
+    return .5 * (tr_term + det_term + quad_term - N) 
+
+
 def calculate_Atilde(A, K, alpha):
     
     
@@ -41,50 +66,9 @@ def calculate_Atilde(A, K, alpha):
         alpha_i = alpha_i*alpha
         A_hat_i = A_hat_i @ A_hat
     A_tilde = (1-alpha)*A_tilde
-
-    """
-    A_tilde = np.zeros((N,N))
-    for i in range(0, K+1):
-        A_tilde += (alpha**i)*np.linalg.matrix_power(A_hat, i)
-    A_tilde = (1-alpha)*A_tilde
-    """
-    
     
     # A_tilde: [N, N], 2-d float tensor
     return torch.tensor(A_tilde).type(torch.FloatTensor)
-
-
-def sparse_split_graphdata(random_seed, labels, train_size, num_class):
-    N = labels.shape[0]
-    class_ids = {}
-    for c in np.unique(labels):
-        class_ids[c] = np.where(labels==c)[0]
-    train_ids = []
-    np.random.seed(random_seed)
-    for c in range(num_class):
-        train_ids.extend(np.random.choice(class_ids[c], size=train_size, replace=False))
-    remain_ids = list(set(np.arange(N)) - set(train_ids))
-    np.random.shuffle(remain_ids)
-    val_ids = remain_ids[0:train_size*num_class]
-    test_ids = remain_ids[train_size*num_class:]
-    
-    return train_ids, val_ids, test_ids
-
-def csbm_to_pygdata(csbm, train_ids, val_ids, test_ids):
-    
-    X = torch.cat(csbm.Xs, dim=0)
-    y = torch.cat(csbm.ys, dim=0)
-    
-    edge_index = []
-    N = csbm.A.shape[0]
-    for i in range(N):
-        for j in range(N):
-            if (i != j):
-                if (csbm.A[i,j] == 1):
-                    edge_index.append([i,j])
-    edge_index = torch.tensor(edge_index, dtype=torch.long).t().contiguous()
-    
-    return Data(x=X, y=y, edge_index=edge_index, train_mask=train_ids, val_mask=val_ids, test_mask=test_ids)
 
 
 

@@ -61,7 +61,7 @@ class cSBM:
         self.threshold = l**2 + (mu**2)/(N/p)
         
         
-    def generate_node_distributions(self):
+    def generate_node_parameters(self):
         
         v = self.v
         p = self.p
@@ -78,10 +78,9 @@ class cSBM:
         b = np.array(b)
         self.b = b
         
-    def generate_node_features(self, n_local, method, base_var=0.05):
+    def generate_node_features(self, n_local, method):
         
         # n_local: number of local data points for each node. 
-        # Method: "GC", "SNC", "DNC".
         
         v = self.v
         p = self.p
@@ -90,24 +89,19 @@ class cSBM:
         N = self.N
         b = self.b
         
-        self.Xs = []
-        self.ys = []
+        if method == "DNC":
+            feature_dim = p
+        else:
+            raise ValueError("wrong method!")
+
+        
+        self.Xs = torch.zeros(N, n_local, feature_dim).type(torch.FloatTensor)
+        self.ys = torch.zeros(N, n_local).type(torch.LongTensor)
                 
-        if (method == "SNC" or method == "Stochastic Node Classification"):
-            if not (p % 2 == 0):
-                raise ValueError("For this generation method to work, p needs to be an even number")
+        if (n_local == 1 and method == "DNC"):
             for i in range(N):
-                cov_vec = b[i,int(p/2):]
-                cov_vec = cov_vec - np.amin(cov_vec, axis=0) + base_var
-                X = np.random.multivariate_normal(mean=b[i, 0:int(p/2)],
-                                                             cov=np.diag(cov_vec), size=n_local)
-                self.Xs.append(torch.from_numpy(X).type(torch.FloatTensor))
-                self.ys.append(torch.tensor([self.v_mask[i]]*n_local).type(torch.LongTensor))
-                
-        elif (n_local == 1 and (method == "DNC" or method == "Deterministic Node Classification")):
-            for i in range(N):
-                self.Xs.append(torch.from_numpy(b[i].reshape(1, -1)).type(torch.FloatTensor))
-                self.ys.append(torch.tensor(self.v_mask[i]).view(-1).type(torch.LongTensor))
+                self.Xs[i] = torch.from_numpy(b[i].reshape(1, -1)).type(torch.FloatTensor)
+                self.ys[i] = torch.tensor(self.v_mask[i]).view(-1).type(torch.LongTensor)
                 
         else:
-            raise AssertionError("wrong combination between method and n_local!")
+            raise ValueError("wrong combination between method and n_local!")
