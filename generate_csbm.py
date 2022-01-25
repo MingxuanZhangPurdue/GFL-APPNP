@@ -77,7 +77,7 @@ class cSBM:
         b = np.array(b)
         self.b = b
         
-    def generate_node_features(self, n_local, method):
+    def generate_node_data(self, n_local, method):
         
         # n_local: number of local data points for each node. 
         
@@ -90,6 +90,13 @@ class cSBM:
         
         if method == "DNC":
             feature_dim = p
+            
+        elif method == "SNC":
+            feature_dim = p
+            
+        elif method == "GC":
+            feature_dim = int((p-1)/4)
+            
         else:
             raise ValueError("wrong method!")
 
@@ -101,6 +108,57 @@ class cSBM:
             for i in range(N):
                 self.Xs[i] = torch.from_numpy(b[i].reshape(1, -1)).type(torch.FloatTensor)
                 self.ys[i] = torch.tensor(self.v_mask[i]).view(-1).type(torch.LongTensor)
+                
+                
+        elif (method == "SNC"):
+            
+            for i in range(N):
+                
+                cov_vec = np.exp(b[i])
+                
+                X = np.random.multivariate_normal(mean=b[i],
+                                                  cov=np.diag(cov_vec), size=n_local)
+                
+                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
+                self.ys[i] = torch.tensor([self.v_mask[i]]*n_local).type(torch.LongTensor)
+                
+                
+        elif (method == "GC"):
+            
+            
+            base_var = 0.1
+            if not ((p-1) % 4 == 0):
+                raise ValueError("For this generation method to work, p-1 needs to be divisble by 4")
+                
+            bp = b[:,0]
+            bp = (bp-np.min(bp))/(np.max(bp)-np.min(bp)).reshape(-1)
+            self.bp = bp
+
+            mu0 = b[:, 1:int((p-1)/4)+1]
+            sigma0 = b[:,int((p-1)/4)+1:int((p-1)/2)+1]
+            sigma0 = sigma0 - np.amin(sigma0, axis=0) + base_var
+
+            mu1 = b[:,int((p-1)/2)+1:int(3*(p-1)/4)+1]
+            sigma1 = b[:,int(3*(p-1)/4)+1:]
+            sigma1 = sigma1 - np.amin(sigma1, axis=0) + base_var
+            
+            for i in range(N):
+                y = np.random.binomial(n=1, p=bp[i], size=n_local)
+                self.ys[i] = torch.tensor(y).type(torch.LongTensor)
+                               
+                X = []
+                
+                for j in range(n_local):
+                               
+                    if (y[j] == 0):
+                        X.append(np.random.multivariate_normal(mean=mu0[i],
+                                                                 cov=np.diag(sigma0[i])))
+                    else:
+                        X.append(np.random.multivariate_normal(mean=mu1[i],
+                                                     cov=np.diag(sigma1[i])))
+                               
+                X = np.array(X)
+                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
                 
         else:
             raise ValueError("wrong combination between method and n_local!")
