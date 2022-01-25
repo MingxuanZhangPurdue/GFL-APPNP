@@ -117,7 +117,7 @@ class Node:
                         Errs = (y_hat - y_onehot).to(grad_device)
                         for pname, param in self.model.named_parameters():
                             p_grad = torch.einsum("i,ibcd->ibcd", A_tilde_k_gd[self.ids_mask], dH[pname][self.ids_mask])
-                            p_grad = torch.einsum("ab,cbef->ef", Errs, p_grad)/X.shape[0]#torch.tensordot(Errs, p_grad, dims=2)
+                            p_grad = torch.einsum("ab,cbef->ef", Errs, p_grad)/X.shape[0]
                             param.grad.data += p_grad.to(device)
                         
                 else:

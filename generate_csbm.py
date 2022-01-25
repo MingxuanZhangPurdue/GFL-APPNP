@@ -12,8 +12,7 @@ class cSBM:
         l: lambda, hyperparameter
         mu: mu, hyperparameter
         """
-        
-        
+
         # Generate class from {-1, 1} for each node
         v = np.random.choice(a = [-1, 1],
                              size = N,
