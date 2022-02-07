@@ -122,7 +122,6 @@ class Node:
                         y_onehot[np.arange(y.shape[0]), y] = 1
                         Errs = (y_hat - y_onehot).to(grad_device)
                         for pname, param in self.model.named_parameters():
-                            #print (A_tilde_k_gd[self.ids_mask].shape, dH[pname][self.ids_mask].shape)
                             p_grad = torch.einsum("i,ibcd->ibcd", A_tilde_k_gd[self.ids_mask], dH[pname][self.ids_mask])
                             p_grad = torch.einsum("ab,cbef->ef", Errs, p_grad)/X.shape[0]
                             param.grad.data += p_grad.to(device)
