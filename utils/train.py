@@ -6,6 +6,81 @@ import torch.nn.functional as F
 
 
 
+def train_FedMLPGC(server, num_communication, 
+             batch_size, learning_rate=0.1, I=10, 
+             Print=False, 
+             checkpoint=None, tl=None, ta=None, vl=None, va=None):
+    
+    if checkpoint != None:
+        server.cmodel.load_state_dict(checkpoint["model_state_dict"])
+        server.best_cmodel.load_state_dict(checkpoint["best_model_state_dict"])
+        server.best_valloss = checkpoint["best_valloss"]
+        server.best_valacc = checkpoint["best_valacc"]
+        train_losses, val_losses = tl.tolist(), vl.tolist()
+        train_accs, val_accs = ta.tolist(), va.tolist()
+        pre_n_communication = len(ta)
+    
+    else:
+        train_losses, val_losses = [], []
+        train_accs, val_accs = [], []
+        pre_n_communication = 0
+    
+    for ith in range(num_communication):
+        
+        train_loss, train_acc, val_loss, val_acc = server.communication(batch_size, learning_rate, I)
+        
+        train_losses.append(train_loss)
+        train_accs.append(train_acc)
+        
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
+        
+        if (Print):
+            print (f"Communication:", ith+1+pre_n_communication, 
+                    "Average train loss:", "{:.5f}".format(train_loss), "Average train accuracy:", "{:.3f}".format(train_acc),
+                    "Average val loss:", "{:.5f}".format(val_loss), "Average val accuracy:", "{:.3f}".format(val_acc), flush=True)
+            
+    return train_losses, train_accs, val_losses, val_accs
+
+
+
+def train_GC(server, num_communication, 
+             batch_size, learning_rate=0.1, I=10,
+             gradient=True, noise=False, 
+             Print=False, 
+             checkpoint=None, tl=None, ta=None, vl=None, va=None):
+    
+    if checkpoint != None:
+        server.cmodel.load_state_dict(checkpoint["model_state_dict"])
+        server.best_cmodel.load_state_dict(checkpoint["best_model_state_dict"])
+        server.best_valloss = checkpoint["best_valloss"]
+        server.best_valacc = checkpoint["best_valacc"]
+        train_losses, val_losses = tl.tolist(), vl.tolist()
+        train_accs, val_accs = ta.tolist(), va.tolist()
+        pre_n_communication = len(ta)
+    
+    else:
+        train_losses, val_losses = [], []
+        train_accs, val_accs = [], []
+        pre_n_communication = 0
+    
+    for ith in range(num_communication):
+        
+        train_loss, train_acc, val_loss, val_acc = server.communication(batch_size, learning_rate, I, gradient, noise)
+        
+        train_losses.append(train_loss)
+        train_accs.append(train_acc)
+        
+        val_losses.append(val_loss)
+        val_accs.append(val_acc)
+        
+        if (Print):
+            print (f"Communication:", ith+1+pre_n_communication, 
+                    "Average train loss:", "{:.5f}".format(train_loss), "Average train accuracy:", "{:.3f}".format(train_acc),
+                    "Average val loss:", "{:.5f}".format(val_loss), "Average val accuracy:", "{:.3f}".format(val_acc), flush=True)
+            
+    return train_losses, train_accs, val_losses, val_accs
+
 def train_NC(server, num_communication, 
              batch_size, learning_rate=0.1, I=10,
              gradient=True, noise=False, 

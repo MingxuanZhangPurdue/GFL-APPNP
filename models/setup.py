@@ -1,8 +1,8 @@
 import copy
-import GFLAPPNP_GC
-import GFLAPPNP_NC
-import FedMLP_GC
-import MLP_GC
+from models import GFLAPPNP_GC
+from models import GFLAPPNP_NC
+from models import FedMLP_GC
+from models import MLP_GC
 
 
 def set_up_MLP_GC(Xs, ys, initial_model, n_train, n_val):

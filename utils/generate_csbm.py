@@ -28,8 +28,6 @@ class cSBM:
         c_in = d + np.sqrt(d)*l
         c_out = d - np.sqrt(d)*l
         
-        #u = np.random.normal(loc=0, scale=1/np.sqrt(p), size=p)
-        
         # Generate the adjacent matrix without self-loop
         A = np.zeros((N,N))
         for i in range(N):
@@ -77,7 +75,7 @@ class cSBM:
         b = np.array(b)
         self.b = b
         
-    def generate_node_data(self, n_local, method):
+    def generate_node_data(self, n_local, method, base_var=0.1):
         
         # n_local: number of local data points for each node. 
         
@@ -95,7 +93,7 @@ class cSBM:
             feature_dim = p
             
         elif method == "GC":
-            feature_dim = int((p-1)/4)
+            feature_dim = int(p/4)
             
         else:
             raise ValueError("wrong method!")
@@ -125,40 +123,47 @@ class cSBM:
                 
         elif (method == "GC"):
             
+            total_number_classes = 2 #np.unique(self.v).shape[0]
             
-            base_var = 0.1
-            if not ((p-1) % 4 == 0):
-                raise ValueError("For this generation method to work, p-1 needs to be divisble by 4")
+            bernoulli_p = (self.v_mask+1)/(max(self.v_mask)+2)
+            self.bernoulli_p = bernoulli_p
+            
+            mus = []
+            sigmas = []
+            
+            
+            
+            for c in range(total_number_classes):
                 
-            bp = b[:,0]
-            bp = (bp-np.min(bp))/(np.max(bp)-np.min(bp)).reshape(-1)
-            self.bp = bp
-
-            mu0 = b[:, 1:int((p-1)/4)+1]
-            sigma0 = b[:,int((p-1)/4)+1:int((p-1)/2)+1]
-            sigma0 = sigma0 - np.amin(sigma0, axis=0) + base_var
-
-            mu1 = b[:,int((p-1)/2)+1:int(3*(p-1)/4)+1]
-            sigma1 = b[:,int(3*(p-1)/4)+1:]
-            sigma1 = sigma1 - np.amin(sigma1, axis=0) + base_var
+                start_index = 0 + int(p/2)*c
+                mu = b[:,start_index:start_index+int(p/4)]
+                sigma = b[:,start_index+int(p/4):start_index+int(p/2)]
+                sigma = np.exp(sigma)
+                
+                mus.append(mu)
+                sigmas.append(sigma)
+                
+            self.mus = mus
+            self.sigmas = sigmas
             
+            local_ids = np.arange(n_local)
             for i in range(N):
-                y = np.random.binomial(n=1, p=bp[i], size=n_local)
+                
+                y = np.sort(np.random.binomial(n=1, p=bernoulli_p[i], size=n_local))
                 self.ys[i] = torch.tensor(y).type(torch.LongTensor)
-                               
+                
+                # sorted by class counts
+                _, examples_per_class = np.unique(y, return_counts=True)
+                
                 X = []
-                
-                for j in range(n_local):
-                               
-                    if (y[j] == 0):
-                        X.append(np.random.multivariate_normal(mean=mu0[i],
-                                                                 cov=np.diag(sigma0[i])))
-                    else:
-                        X.append(np.random.multivariate_normal(mean=mu1[i],
-                                                     cov=np.diag(sigma1[i])))
-                               
-                X = np.array(X)
-                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
-                
-        else:
-            raise ValueError("wrong combination between method and n_local!")
+                for c in range(total_number_classes):
+                    mu = mus[c]
+                    sigma = sigmas[c]
+                    
+                    if examples_per_class[c] > 0:
+                        X.append(np.random.multivariate_normal(mean=mu[i],
+                                                               cov=np.diag(sigma[i]),
+                                                               size=examples_per_class[c]))
+                np.random.shuffle(local_ids)        
+                X = np.concatenate(X, axis=0)[local_ids]
+                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)   

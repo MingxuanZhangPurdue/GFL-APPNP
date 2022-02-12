@@ -133,7 +133,7 @@ class Node:
                 optimizer.step()
             
             
-    def cmode_eval(self, cmodel, A_tilde_k, C_k, mode="train"):
+    def cmodel_eval(self, cmodel, A_tilde_k, C_k, mode="train"):
         
         if mode == "train":
             X, y = self.X_train, self.y_train
@@ -295,8 +295,8 @@ class Central_Server:
         for k in range(self.N):
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-            tloss, tacc = self.node_list[k].cmode_eval(self.cmodel, self.A_tilde[k,:], C_k, mode="train")
-            vloss, vacc = self.node_list[k].cmode_eval(self.cmodel, self.A_tilde[k,:], C_k, mode="val")
+            tloss, tacc = self.node_list[k].cmodel_eval(self.cmodel, self.A_tilde[k,:], C_k, mode="train")
+            vloss, vacc = self.node_list[k].cmodel_eval(self.cmodel, self.A_tilde[k,:], C_k, mode="val")
             avg_trainloss += tloss.item()
             avg_trainacc += tacc
             avg_valloss += vloss.item()
@@ -326,7 +326,7 @@ class Central_Server:
         for k in range(self.N):
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-            tloss, tacc = self.node_list[k].cmode_eval(self.best_cmodel, self.A_tilde[k,:], C_k, mode="test")
+            tloss, tacc = self.node_list[k].cmodel_eval(self.best_cmodel, self.A_tilde[k,:], C_k, mode="test")
             avg_testloss += tloss.item()
             avg_testacc += tacc
         avg_testloss = avg_testloss/self.N
