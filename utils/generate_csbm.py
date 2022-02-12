@@ -85,7 +85,7 @@ class cSBM:
         u = self.u
         N = self.N
         b = self.b
-        
+                
         if method == "DNC":
             feature_dim = p
             
@@ -93,7 +93,7 @@ class cSBM:
             feature_dim = p
             
         elif method == "GC":
-            feature_dim = int(p/4)
+            feature_dim = p
             
         else:
             raise ValueError("wrong method!")
@@ -123,47 +123,25 @@ class cSBM:
                 
         elif (method == "GC"):
             
-            total_number_classes = 2 #np.unique(self.v).shape[0]
+            total_number_classes = 2
             
             bernoulli_p = (self.v_mask+1)/(max(self.v_mask)+2)
+            
             self.bernoulli_p = bernoulli_p
             
-            mus = []
-            sigmas = []
-            
-            
-            
-            for c in range(total_number_classes):
-                
-                start_index = 0 + int(p/2)*c
-                mu = b[:,start_index:start_index+int(p/4)]
-                sigma = b[:,start_index+int(p/4):start_index+int(p/2)]
-                sigma = np.exp(sigma)
-                
-                mus.append(mu)
-                sigmas.append(sigma)
-                
-            self.mus = mus
-            self.sigmas = sigmas
-            
             local_ids = np.arange(n_local)
+            
             for i in range(N):
                 
-                y = np.sort(np.random.binomial(n=1, p=bernoulli_p[i], size=n_local))
+                y = np.random.binomial(n=1, p=bernoulli_p[i], size=n_local)
                 self.ys[i] = torch.tensor(y).type(torch.LongTensor)
+                y_mask = np.copy(y)
+                y_mask[y==0] = -1
                 
-                # sorted by class counts
-                _, examples_per_class = np.unique(y, return_counts=True)
                 
                 X = []
-                for c in range(total_number_classes):
-                    mu = mus[c]
-                    sigma = sigmas[c]
-                    
-                    if examples_per_class[c] > 0:
-                        X.append(np.random.multivariate_normal(mean=mu[i],
-                                                               cov=np.diag(sigma[i]),
-                                                               size=examples_per_class[c]))
-                np.random.shuffle(local_ids)        
-                X = np.concatenate(X, axis=0)[local_ids]
-                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)   
+                for j in range(n_local):
+                    X.append(np.sqrt(mu/N)*y_mask[j]*u + np.random.normal(loc=0, scale=1, size=p)/np.sqrt(p))
+                                    
+                X = np.array(X)[local_ids]
+                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
