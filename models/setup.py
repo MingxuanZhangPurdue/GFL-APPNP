@@ -1,8 +1,27 @@
 import copy
-from models import GFLAPPNP_GC
-from models import GFLAPPNP_NC
-from models import FedMLP_GC
-from models import MLP_GC
+import GFLAPPNP_GC
+import GFLAPPNP_NC
+import FedMLP_GC
+import MLP_GC
+import FedMLP_NC
+
+def set_up_FedMLP_NC(Xs, ys, initial_model, train_ids, val_ids, test_ids):
+    
+    N = Xs.shape[0]
+    
+    node_list = []
+    
+    for i in range(N):
+        
+        model_i = copy.deepcopy(initial_model)
+        
+        node_i = FedMLP_NC.Node(local_model=model_i, X=Xs[i], y=ys[i])
+        
+        node_list.append(node_i)
+        
+    server = FedMLP_NC.Central_Server(initial_model, node_list, train_ids, val_ids, test_ids)
+    
+    return server
 
 
 def set_up_MLP_GC(Xs, ys, initial_model, n_train, n_val):

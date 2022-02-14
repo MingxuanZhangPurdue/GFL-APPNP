@@ -5,11 +5,10 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 
-
-def train_FedMLPGC(server, num_communication, 
-             batch_size, learning_rate=0.1, I=10, 
-             Print=False, 
-             checkpoint=None, tl=None, ta=None, vl=None, va=None):
+def train_FedMLP(server, num_communication, 
+                 batch_size, learning_rate=0.1, I=10, 
+                 Print=False, 
+                 checkpoint=None, tl=None, ta=None, vl=None, va=None):
     
     if checkpoint != None:
         server.cmodel.load_state_dict(checkpoint["model_state_dict"])
@@ -41,7 +40,6 @@ def train_FedMLPGC(server, num_communication,
                     "Average val loss:", "{:.5f}".format(val_loss), "Average val accuracy:", "{:.3f}".format(val_acc), flush=True)
             
     return train_losses, train_accs, val_losses, val_accs
-
 
 
 def train_GC(server, num_communication, 

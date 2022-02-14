@@ -127,7 +127,7 @@ class Node:
                 optimizer.step()
             
             
-    def cmode_eval(self, cmodel, A_tilde_k, C_k):
+    def cmodel_eval(self, cmodel, A_tilde_k, C_k):
         k = self.idx
         with torch.no_grad():
             X, y = self.X.to(device), self.y.to(device)
@@ -299,9 +299,9 @@ class Central_Server:
         for k in self.train_ids:
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-                tloss, tacc = self.node_list[k].cmode_eval(self.cmodel, self.A_tilde[k,:], C_k)
-                avg_trainloss += tloss.item()
-                avg_trainacc += tacc
+            tloss, tacc = self.node_list[k].cmodel_eval(self.cmodel, self.A_tilde[k,:], C_k)
+            avg_trainloss += tloss.item()
+            avg_trainacc += tacc
         avg_trainloss = avg_trainloss/len(self.train_ids)
         avg_trainacc = avg_trainacc/len(self.train_ids)
         
@@ -309,9 +309,9 @@ class Central_Server:
         for k in self.val_ids:
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-                vloss, vacc = self.node_list[k].cmode_eval(self.cmodel, self.A_tilde[k,:], C_k)
-                avg_valloss += vloss.item()
-                avg_valacc += vacc
+            vloss, vacc = self.node_list[k].cmodel_eval(self.cmodel, self.A_tilde[k,:], C_k)
+            avg_valloss += vloss.item()
+            avg_valacc += vacc
         avg_valloss = avg_valloss/len(self.val_ids)
         avg_valacc = avg_valacc/len(self.val_ids)
         
@@ -335,9 +335,9 @@ class Central_Server:
         for k in self.test_ids:
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-                tloss, tacc = self.node_list[k].cmode_eval(self.best_cmodel, self.A_tilde[k,:], C_k)
-                avg_testloss += tloss.item()
-                avg_testacc += tacc
+            tloss, tacc = self.node_list[k].cmodel_eval(self.best_cmodel, self.A_tilde[k,:], C_k)
+            avg_testloss += tloss.item()
+            avg_testacc += tacc
         avg_testloss = avg_testloss/len(self.test_ids)
         avg_testacc = avg_testacc/len(self.test_ids)
         
