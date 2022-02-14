@@ -1,9 +1,9 @@
 import copy
-import GFLAPPNP_GC
-import GFLAPPNP_NC
-import FedMLP_GC
-import MLP_GC
-import FedMLP_NC
+from models import GFLAPPNP_GC
+from models import GFLAPPNP_NC
+from models import FedMLP_GC
+from models import MLP_GC
+from models import FedMLP_NC
 
 def set_up_FedMLP_NC(Xs, ys, initial_model, train_ids, val_ids, test_ids):
     
@@ -76,9 +76,7 @@ def set_up_NC(Xs, ys, initial_model, A_tilde, train_ids, val_ids, test_ids):
         
         node_list.append(node_i)
         
-    server = GFLAPPNP_NC.Central_Server(node_list, A_tilde, train_ids, val_ids, test_ids)
-    
-    server.init_central_parameters(initial_model)
+    server = GFLAPPNP_NC.Central_Server(initial_model, node_list, A_tilde, train_ids, val_ids, test_ids)
     
     return server
 

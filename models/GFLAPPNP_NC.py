@@ -153,24 +153,19 @@ class Node:
             
 class Central_Server:
     
-    def __init__(self, node_list, A_tilde, train_indices, valid_indices, test_indices):
+    def __init__(self, init_model, node_list, A_tilde, train_indices, valid_indices, test_indices):
 
         self.A_tilde = A_tilde.to(device)
         self.A_tilde_gdevice = A_tilde.to(grad_device)
         self.node_list = node_list
         self.N = len(node_list)
-        self.cmodel = None
+        self.cmodel = copy.deepcopy(init_model).to(device)
         self.train_ids = train_indices
         self.val_ids = valid_indices
         self.test_ids = test_indices
         self.best_cmodel = None
         self.best_valloss = np.inf
         self.best_valacc = 0
-        
-    def init_central_parameters(self, model):
-        
-        self.cmodel = copy.deepcopy(model)
-        self.cmodel = self.cmodel.to(device)
         
         
     def broadcast_central_parameters(self):

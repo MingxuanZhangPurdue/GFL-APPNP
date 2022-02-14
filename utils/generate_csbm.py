@@ -129,8 +129,6 @@ class cSBM:
             
             self.bernoulli_p = bernoulli_p
             
-            local_ids = np.arange(n_local)
-            
             for i in range(N):
                 
                 y = np.random.binomial(n=1, p=bernoulli_p[i], size=n_local)
@@ -143,5 +141,5 @@ class cSBM:
                 for j in range(n_local):
                     X.append(np.sqrt(mu/N)*y_mask[j]*u + np.random.normal(loc=0, scale=1, size=p)/np.sqrt(p))
                                     
-                X = np.array(X)[local_ids]
+                X = np.array(X)
                 self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)

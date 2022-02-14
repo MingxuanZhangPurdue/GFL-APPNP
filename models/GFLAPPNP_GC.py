@@ -157,7 +157,7 @@ class Node:
     
     def cmodel_collect(self, cmodel):
         
-        x = self.X_train
+        x = self.X
         with torch.no_grad():  
             h = torch.mean(cmodel(x), dim=0, keepdims=True)
         return h
