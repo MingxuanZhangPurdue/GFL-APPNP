@@ -48,6 +48,8 @@ def train_GC(server, num_communication,
              Print=False, 
              checkpoint=None, tl=None, ta=None, vl=None, va=None):
     
+    print_time = int(num_communication / 10)
+    
     if checkpoint != None:
         server.cmodel.load_state_dict(checkpoint["model_state_dict"])
         server.best_cmodel.load_state_dict(checkpoint["best_model_state_dict"])
@@ -72,7 +74,7 @@ def train_GC(server, num_communication,
         val_losses.append(val_loss)
         val_accs.append(val_acc)
         
-        if (Print):
+        if (Print and ith % print_time == 0):
             print (f"Communication:", ith+1+pre_n_communication, 
                     "Average train loss:", "{:.5f}".format(train_loss), "Average train accuracy:", "{:.3f}".format(train_acc),
                     "Average val loss:", "{:.5f}".format(val_loss), "Average val accuracy:", "{:.3f}".format(val_acc), flush=True)
