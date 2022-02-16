@@ -45,10 +45,9 @@ def train_FedMLP(server, num_communication,
 def train_GC(server, num_communication, 
              batch_size, learning_rate=0.1, I=10,
              gradient=True, noise=False, 
-             Print=False, 
+             Print=False, print_time=1,
              checkpoint=None, tl=None, ta=None, vl=None, va=None):
     
-    print_time = int(num_communication / 10)
     
     if checkpoint != None:
         server.cmodel.load_state_dict(checkpoint["model_state_dict"])
