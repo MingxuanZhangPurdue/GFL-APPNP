@@ -84,22 +84,10 @@ class cSBM:
         mu = self.mu
         u = self.u
         N = self.N
-        b = self.b
-                
-        if method == "DNC":
-            feature_dim = p
+        b = self.b     
             
-        elif method == "SNC":
-            feature_dim = p
-            
-        elif method == "GC":
-            feature_dim = p
-            
-        else:
-            raise ValueError("wrong method!")
 
-        
-        self.Xs = torch.zeros(N, n_local, feature_dim).type(torch.FloatTensor)
+        self.Xs = torch.zeros(N, n_local, p).type(torch.FloatTensor)
         self.ys = torch.zeros(N, n_local).type(torch.LongTensor)
                 
         if (n_local == 1 and method == "DNC"):
@@ -112,18 +100,17 @@ class cSBM:
             
             for i in range(N):
                 
-                cov_vec = np.exp(b[i])
+                self.ys[i] = torch.from_numpy(np.repeat(self.v_mask[i], n_local)).type(torch.LongTensor)                
                 
-                X = np.random.multivariate_normal(mean=b[i],
-                                                  cov=np.diag(cov_vec), size=n_local)
-                
+                X = []
+                for j in range(n_local):
+                    X.append(np.sqrt(mu/N)*v[i]*u + np.random.normal(loc=0, scale=1, size=p)/np.sqrt(p))
+                                    
+                X = np.array(X)
                 self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
-                self.ys[i] = torch.tensor([self.v_mask[i]]*n_local).type(torch.LongTensor)
                 
                 
         elif (method == "GC"):
-            
-            total_number_classes = 2
             
             bernoulli_p = (self.v_mask+1)/(max(self.v_mask)+2)
             
