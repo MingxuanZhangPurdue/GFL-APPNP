@@ -30,10 +30,19 @@ class Node:
                 param.copy_(cmodel.state_dict()[pname])
                 
                 
-    def upload_information(self, gradient, noise):
+    def upload_information(self, gradient, noise, num_upload, deterministic):
         
-        x = self.X
         
+        
+        if num_upload == 1 and deterministic:
+            x = self.X[0].view(1, -1)
+
+        if num_upload == 1 and deterministic==False:
+            x = self.X[np.random.choice(a=self.X.shape[0])].view(1, -1)
+            
+        else:
+            x = self.X[np.random.choice(a=self.X.shape[0], replace=False, size=num_upload)]
+
         x = x.to(device)
             
         if gradient:
@@ -155,7 +164,16 @@ class Node:
         return loss, acc
     
     
-    def cmodel_collect(self, cmodel):
+    def cmodel_collect(self, cmodel, num_upload, deterministic):
+        
+        if num_upload == 1 and deterministic:
+            x = self.X[0].view(1, -1)
+
+        if num_upload == 1 and deterministic==False:
+            x = self.X[np.random.choice(a=self.X.shape[0])].view(1, -1)
+            
+        else:
+            x = self.X[np.random.choice(a=self.X.shape[0], replace=False, size=num_upload)]
         
         x = self.X
         x = x.to(device)
@@ -191,7 +209,7 @@ class Central_Server:
         for node in self.node_list:
             node.receieve_central_parameters(self.cmodel)
         
-    def collect_node_information(self, gradient, noise):
+    def collect_node_information(self, gradient, noise, num_upload, deterministic):
         
         H = []
         
@@ -202,7 +220,7 @@ class Central_Server:
                 dH[pname] = []
                 
             for i in range(self.N):
-                h_i, dh_i = self.node_list[i].upload_information(gradient, noise)
+                h_i, dh_i = self.node_list[i].upload_information(gradient, noise, num_upload, deterministic)
                 H.append(h_i)
                 for pname in self.cmodel.state_dict().keys():
                     dH[pname].append(dh_i[pname])
@@ -232,12 +250,13 @@ class Central_Server:
         
     def communication(self, 
                       batch_size, learning_rate, I, 
-                      gradient=True, noise=False):
+                      gradient=True, noise=False,
+                      num_upload=1, deterministic=False):
           
         self.broadcast_central_parameters()
         
         # H: [N, num_class]
-        H, dH = self.collect_node_information(gradient, noise)
+        H, dH = self.collect_node_information(gradient, noise, num_upload, deterministic)
         
         # C: [N, num_class]
         with torch.no_grad():
@@ -251,7 +270,7 @@ class Central_Server:
         
         self.mean_aggregation_train()
 
-        train_loss, train_acc, val_loss, val_acc = self.eval_train_val()
+        train_loss, train_acc, val_loss, val_acc = self.eval_train_val(num_upload, deterministic)
         
         
         """
@@ -291,7 +310,7 @@ class Central_Server:
  
  
 
-    def eval_train_val(self):
+    def eval_train_val(self, num_upload, deterministic):
         
         avg_trainloss = 0
         avg_trainacc = 0
@@ -300,7 +319,7 @@ class Central_Server:
         
         H = []
         for i in range(self.N):
-            H.append(self.node_list[i].cmodel_collect(self.cmodel))
+            H.append(self.node_list[i].cmodel_collect(self.cmodel, num_upload, deterministic))
         H = torch.cat(H, dim=0)
             
         with torch.no_grad():

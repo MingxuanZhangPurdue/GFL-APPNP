@@ -96,17 +96,30 @@ class cSBM:
                 self.ys[i] = torch.tensor(self.v_mask[i]).view(-1).type(torch.LongTensor)
                 
                 
+        elif (method == "SNC_MN"):
+            
+            for i in range(N):
+                
+                cov_vec = np.exp(b[i])
+                
+                X = np.random.multivariate_normal(mean=b[i],
+                                                  cov=np.diag(cov_vec), size=n_local)
+                
+                self.ys[i] = torch.from_numpy(np.repeat(self.v_mask[i], n_local)).type(torch.LongTensor)                
+
+                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
+            
+                
+                
         elif (method == "SNC"):
             
             for i in range(N):
                 
                 self.ys[i] = torch.from_numpy(np.repeat(self.v_mask[i], n_local)).type(torch.LongTensor)                
                 
-                X = []
-                for j in range(n_local):
-                    X.append(np.sqrt(mu/N)*v[i]*u + np.random.normal(loc=0, scale=1, size=p)/np.sqrt(p))
-                                    
-                X = np.array(X)
+                X = np.sqrt(mu/N)*v[i]*u + np.random.multivariate_normal(mean=np.zeros(p), 
+                                                                         cov=np.identity(p), 
+                                                                         size=n_local)/np.sqrt(p)
                 self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
                 
                 

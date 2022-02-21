@@ -131,7 +131,7 @@ class Node:
     
     
     def local_update(self, A_tilde_k_d, A_tilde_k_gd, Ck_class, dH_class, 
-                              batch_size, learning_rate, I, gradient):
+                           batch_size, learning_rate, I, gradient):
         
         f not (batch_size <= self.n_local):
             raise ValueError("batch size should be less or equal to the number of local data points")
@@ -140,7 +140,7 @@ class Node:
             self.train_batchsize = batch_size
             train_dataset = torch.utils.data.TensorDataset(self.X_train, self.y_train)
             self.train_dataloader = torch.utils.data.DataLoader(train_dataset, 
-                                                                batch_size=
+                                                                batch_size=batch_size)
         
         k = self.idx
         
@@ -167,6 +167,9 @@ class Node:
                                                                 
                     
                     if (gradient == True and dH_class != None):
+                        
+                        coef_c = torch.ones(y_hat_c.shape[0])
+                        coef_c[y_batch!=c] = -1
                         loss_c = general_nll_loss(torch.log(y_hat_c), y_onehot_c)
                         loss_c.backward()
                         Errs_c = (y_hat_c - y_onehot_c).to(grad_device)
