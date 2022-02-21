@@ -319,7 +319,7 @@ class Central_Server:
         for k in self.val_ids:
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-            vloss, vacc = self.node_list[k].majority_eval(self.cmodel, self.A_tilde[k,:], C_k)#cmodel_eval(self.cmodel, self.A_tilde[k,:], C_k)
+            vloss, vacc = self.node_list[k].cmodel_eval(self.cmodel, self.A_tilde[k,:], C_k)
             avg_valloss += vloss.item()
             avg_valacc += vacc
         avg_valloss = avg_valloss/len(self.val_ids)
@@ -345,7 +345,7 @@ class Central_Server:
         for k in self.test_ids:
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
-            tloss, tacc = self.node_list[k].majority_eval(self.best_cmodel, self.A_tilde[k,:], C_k)#cmodel_eval(self.best_cmodel, self.A_tilde[k,:], C_k)
+            tloss, tacc = self.node_list[k].cmodel_eval(self.best_cmodel, self.A_tilde[k,:], C_k)
             avg_testloss += tloss.item()
             avg_testacc += tacc
         avg_testloss = avg_testloss/len(self.test_ids)
