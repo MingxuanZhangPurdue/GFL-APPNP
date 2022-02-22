@@ -7,7 +7,7 @@ import torch.optim as optim
 from config import device, grad_device
 
 
-def general_nll_loss(log_yhat, yhot):
+def general_nll_loss(log_yhat, yhot, coef=-1):
     
     """
     yhat: [N, num_class]
@@ -16,9 +16,7 @@ def general_nll_loss(log_yhat, yhot):
     
     y_bool = yhot.type(torch.BoolTensor) if device == "cpu" else yhot.type(torch.cuda.BoolTensor)
     
-    N, _ = yhot.shape
-    
-    nll_loss = (-1*log_yhat.view(-1))[y_bool.view(-1)].sum()/N
+    nll_loss = (coef*log_yhat.view(-1))[y_bool.view(-1)].sum()
     
     return nll_loss
 
@@ -134,6 +132,75 @@ class Node:
                 
             return h, None
         
+    # Check done
+    def adversarial_local_update(self, A_tilde_k_d, A_tilde_k_gd, Ck_class, dH_class, 
+                                 batch_size, learning_rate, I, gradient):
+        
+        if (batch_size > self.X_train.shape[0]):
+            raise ValueError("batch size should be less or equal to the number of local data points")
+        
+        if (self.train_dataloader == None or self.train_batchsize != batch_size):
+            self.train_batchsize = batch_size
+            train_dataset = torch.utils.data.TensorDataset(self.X_train, self.y_train)
+            self.train_dataloader = torch.utils.data.DataLoader(train_dataset, 
+                                                                batch_size=batch_size)
+        
+        k = self.idx
+        
+        N = self.N
+        
+        num_class = self.tnc
+        
+        optimizer = optim.SGD(self.model.parameters(), lr=learning_rate)
+
+        for ith_update in range(I):
+            
+            for X_batch, y_batch in self.train_dataloader:
+                
+                batch_size = X_batch.shape[0]
+                optimizer.zero_grad()
+                ids = torch.argsort(y_batch)
+                X_batch, y_batch = X_batch[ids,:], y_batch[ids]
+                avail_class, class_count = torch.unique(y_batch, sorted=True, return_counts=True)
+                start = 0
+                
+                for i in range(avail_class.shape[0]):
+                    
+                    c_true = avail_class[i].item()
+                    X, y = X_batch[start:start+class_count[i]], y_batch[start:start+class_count[i]]
+                    start = class_count[i]
+                    
+                    for c in range(self.tnc):
+
+                        H = self.model(X)
+                        Z_c = A_tilde_k_d[k]*H + Ck_class[c]
+                        y_hat_c = F.softmax(Z_c, dim=1)
+                        y_hot_c = torch.zeros(y.shape[0], num_class).to(device)
+                        y_hot_c[np.arange(y.shape[0]), c] = 1
+                        
+                        
+                        if c == c_true:
+                            coef = -1
+                        else:
+                            coef = 1
+                            
+                        if (gradient == True and dH_class != None):
+                            loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c, coef)/(batch_size)
+                            loss_c.backward()
+                            with torch.no_grad():
+                                Errs_c = -1*coef*(y_hat_c - y_hot_c).to(grad_device)
+                                for pname, param in self.model.named_parameters():
+                                    p_grad_c = torch.einsum("i,ibcd->ibcd", A_tilde_k_gd[self.ids_mask], 
+                                                            dH_class[c][pname][self.ids_mask])
+
+                                    p_grad_c = torch.einsum("ab,cbef->ef", Errs_c, p_grad_c)/(batch_size)
+                                    param.grad.data += p_grad_c.to(device)
+                        else:
+                            loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c, coef)/(batch_size)
+                            loss_c.backward()
+
+                optimizer.step()
+        
         
     # Check done
     def weighted_local_update(self, A_tilde_k_d, A_tilde_k_gd, Ck_class, dH_class, 
@@ -160,44 +227,49 @@ class Node:
             
             for X_batch, y_batch in self.train_dataloader:
                 
-                
+                batch_size = X_batch.shape[0]
                 optimizer.zero_grad()
+                ids = torch.argsort(y_batch)
+                X_batch, y_batch = X_batch[ids,:], y_batch[ids]
+                avail_class, class_count = torch.unique(y_batch, sorted=True, return_counts=True)
+                start = 0
                 
-                
-                for c in range(self.tnc):
-                                                                
-                    H = self.model(X_batch)
-                    Z_c = A_tilde_k_d[k]*H + Ck_class[c]
-                    y_hat_c = F.softmax(Z_c, dim=1)
+                for i in range(avail_class.shape[0]):
                     
-                    batch_size = X_batch.shape[0]
-                    y_hot_c = torch.zeros(y_batch.shape[0], num_class).to(device)
+                    c_true = avail_class[i].item()
+                    X, y = X_batch[start:start+class_count[i]], y_batch[start:start+class_count[i]]
+                    start = class_count[i]
                     
-                    
-                    for j in range(batch_size):
-                        if (y_batch[j] == c):
-                            hot_j = torch.zeros(num_class)
-                            hot_j[c] = 1
+                    for c in range(self.tnc):
+
+                        H = self.model(X)
+                        Z_c = A_tilde_k_d[k]*H + Ck_class[c]
+                        y_hat_c = F.softmax(Z_c, dim=1)
+                        
+                        if c == c_true:
+                            y_hot_c = torch.zeros(y.shape[0], num_class).to(device)
+                            y_hot_c[np.arange(y.shape[0]), c_true] = 1
+                            weight = 1
                         else:
-                            hot_j = torch.ones(num_class)
-                            hot_j[c] = 0
-                        y_hot_c[j,:] = hot_j
+                            y_hot_c = torch.ones(y.shape[0], num_class).to(device)
+                            y_hot_c[np.arange(y.shape[0]),c] = 0
+                            weight = (num_class-1)
                             
-                    if (gradient == True and dH_class != None):
-                        loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)
-                        loss_c.backward()
-                        with torch.no_grad():
-                            Errs_c = (y_hat_c - y_hot_c).to(grad_device)
-                            for pname, param in self.model.named_parameters():
-                                p_grad_c = torch.einsum("i,ibcd->ibcd", A_tilde_k_gd[self.ids_mask], 
-                                                        dH_class[c][pname][self.ids_mask])
-                                
-                                p_grad_c = torch.einsum("ab,cbef->ef", Errs_c, p_grad_c)/X_batch.shape[0]
-                                param.grad.data += p_grad_c.to(device)
-                    else:
-                        loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)
-                        loss_c.backward()
-                
+                        if (gradient == True and dH_class != None):
+                            loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)/(weight*batch_size)
+                            loss_c.backward()
+                            with torch.no_grad():
+                                Errs_c = (y_hat_c - y_hot_c).to(grad_device)
+                                for pname, param in self.model.named_parameters():
+                                    p_grad_c = torch.einsum("i,ibcd->ibcd", A_tilde_k_gd[self.ids_mask], 
+                                                            dH_class[c][pname][self.ids_mask])
+
+                                    p_grad_c = torch.einsum("ab,cbef->ef", Errs_c, p_grad_c)/(weight*batch_size)
+                                    param.grad.data += p_grad_c.to(device)
+                        else:
+                            loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)/(weight*batch_size)
+                            loss_c.backward()
+
                 optimizer.step()
         
         
@@ -291,7 +363,7 @@ class Node:
                 
                 
                 optimizer.zero_grad()
-                
+                batch_size = X_batch.shape[0]
                 
                 for c in range(self.tnc):
                                                                 
@@ -313,7 +385,7 @@ class Node:
                         y_hot_c[j,:] = hot_j
                             
                     if (gradient == True and dH_class != None):
-                        loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)
+                        loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)/batch_size
                         loss_c.backward()
                         with torch.no_grad():
                             Errs_c = (y_hat_c - y_hot_c).to(grad_device)
@@ -321,10 +393,10 @@ class Node:
                                 p_grad_c = torch.einsum("i,ibcd->ibcd", A_tilde_k_gd[self.ids_mask], 
                                                         dH_class[c][pname][self.ids_mask])
                                 
-                                p_grad_c = torch.einsum("ab,cbef->ef", Errs_c, p_grad_c)/X_batch.shape[0]
+                                p_grad_c = torch.einsum("ab,cbef->ef", Errs_c, p_grad_c)/batch_size
                                 param.grad.data += p_grad_c.to(device)
                     else:
-                        loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)
+                        loss_c = general_nll_loss(torch.log(y_hat_c), y_hot_c)/batch_size
                         loss_c.backward()
                 
                 optimizer.step()
@@ -465,7 +537,7 @@ class Central_Server:
                 with torch.no_grad():
                     Ck_c = C_class[c][k,:] - self.A_tilde[k,k]*H_class[c][k,:]
                     Ck_class[c] = Ck_c
-            self.node_list[k].greedy_local_update(self.A_tilde[k,:], self.A_tilde_gdevice[k,:], 
+            self.node_list[k].adversarial_local_update(self.A_tilde[k,:], self.A_tilde_gdevice[k,:], 
                                            Ck_class, dH_class, 
                                            batch_size, learning_rate, I, gradient)
         
@@ -554,6 +626,9 @@ class Central_Server:
         avg_testloss = 0
         avg_testacc = 0
         
+        testlosses = []
+        testaccs = []
+        
 
         H_class = {}
         
@@ -579,6 +654,8 @@ class Central_Server:
                     Ck_c = C_class[c][k,:] - self.A_tilde[k,k]*H_class[c][k,:]
                     Ck_class[c] = Ck_c
             tloss, tacc = self.node_list[k].cmodel_eval(self.best_cmodel, self.A_tilde[k,:], Ck_class, "test")
+            testlosses.append(tloss)
+            testaccs.append(tacc)
             avg_testloss += tloss
             avg_testacc += tacc
             
@@ -587,4 +664,4 @@ class Central_Server:
             
         
         
-        return  avg_testloss, avg_testacc
+        return  avg_testloss, avg_testacc, testaccs, testlosses
