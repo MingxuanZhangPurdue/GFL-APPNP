@@ -83,7 +83,7 @@ class Node:
                      learning_rate, I, 
                      gradient):
         
-        if not (batch_size <= self.n_local):
+        if (batch_size > self.n_local):
             raise ValueError("batch size should be less or equal to the number of local data points")
         
         if (self.data_loader == None):

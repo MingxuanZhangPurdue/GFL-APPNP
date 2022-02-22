@@ -7,6 +7,22 @@ from torch_geometric.utils import to_networkx
 from torch_geometric.data import Data
 
 
+def general_nll_loss(log_yhat, yhot):
+    
+    """
+    yhat: [N, num_class]
+    yhot: target hot tensor, [N, num_class]
+    """
+    
+    y_bool = yhot.type(torch.BoolTensor) if device == "cpu" else yhot.type(torch.cuda.BoolTensor)
+    
+    N, _ = yhot.shape
+    
+    nll_loss = (-1*log_yhat.view(-1))[y_bool.view(-1)].sum()/N
+    
+    return nll_loss
+
+
 def kl_mvn(m0, S0, m1, S1):
     """
     Kullback-Liebler divergence from Gaussian pm,pv to Gaussian qm,qv.
