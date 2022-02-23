@@ -253,7 +253,10 @@ class Central_Server:
 
         train_loss, train_acc, val_loss, val_acc = self.eval_train_val()
         
+<<<<<<< Updated upstream
         
+=======
+>>>>>>> Stashed changes
         if (val_loss < self.best_valloss):
             self.best_valloss = val_loss
             self.best_cmodel = copy.deepcopy(self.cmodel)
