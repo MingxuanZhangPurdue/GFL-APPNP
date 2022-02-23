@@ -1,6 +1,6 @@
 import copy
 from models import GFLAPPNP_GC
-from models import GFLAPPNP_GC_improved
+from models import GFLAPPNP_GC_underDev
 from models import GFLAPPNP_NC
 from models import FedMLP_GC
 from models import MLP_GC

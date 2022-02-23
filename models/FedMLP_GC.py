@@ -12,9 +12,10 @@ class Node:
         
         
         self.model = copy.deepcopy(local_model).to(device)
-        self.n_local = X.shape[0]
+        
         self.train_dataloader = None
         self.train_batchsize = 1
+        self.n_local = X.shape[0]
         
         ids = np.arange(self.n_local)
         train_ids = ids[0:n_train]
@@ -25,6 +26,7 @@ class Node:
         self.X_train, self.y_train = self.X[train_ids], self.y[train_ids]
         self.X_val, self.y_val = self.X[val_ids], self.y[val_ids]
         self.X_test, self.y_test = self.X[test_ids], self.y[test_ids]
+        self.n_train = X_train.shape[0]
     
     
     def receieve_central_parameters(self, cmodel):
@@ -36,7 +38,7 @@ class Node:
     
     def local_update(self, batch_size, learning_rate, I):
         
-        if not (batch_size <= self.n_local):
+        if not (batch_size <= self.n_train):
             raise ValueError("batch size should be less or equal to the number of local data points")
         
         if (self.train_dataloader == None or self.train_batchsize != batch_size):

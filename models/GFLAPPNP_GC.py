@@ -1,9 +1,12 @@
 import torch
+import time
 import copy
+import multiprocessing
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from joblib import Parallel, delayed
 from config import device, grad_device
 
 class Node:
@@ -28,6 +31,7 @@ class Node:
         self.X_train, self.y_train = self.X[train_ids], self.y[train_ids]
         self.X_val, self.y_val = self.X[val_ids], self.y[val_ids]
         self.X_test, self.y_test = self.X[test_ids], self.y[test_ids]
+        self.n_train = self.X_train.shape[0]
     
     
     def receieve_central_parameters(self, cmodel):
@@ -38,7 +42,7 @@ class Node:
                 
     def upload_information(self, gradient, noise):
         
-        x = self.X
+        x = self.X_train#self.X
             
         if gradient:
             
@@ -87,7 +91,7 @@ class Node:
                      learning_rate, I, 
                      gradient):
         
-        if (batch_size > self.n_local):
+        if (batch_size > self.n_train):
             raise ValueError("batch size should be less or equal to the number of local data points")
         
         if (self.train_dataloader == None or self.train_batchsize != batch_size):
@@ -157,7 +161,7 @@ class Node:
     
     def cmodel_collect(self, cmodel):
         
-        x = self.X
+        x = self.X_train#self.X
         with torch.no_grad():  
             h = torch.mean(cmodel(x), dim=0, keepdims=True)
         return h
@@ -221,8 +225,7 @@ class Central_Server:
             H = torch.cat(H, dim=0)
             
             return H, None
-            
-            
+                    
         
     def communication(self, 
                       batch_size, learning_rate, I, 
@@ -236,7 +239,9 @@ class Central_Server:
         # C: [N, num_class]
         with torch.no_grad():
             C = torch.matmul(self.A_tilde, H)
-        
+            
+            
+            
         for k in range(self.N):
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
@@ -245,6 +250,7 @@ class Central_Server:
                                            batch_size, learning_rate, 
                                            I, 
                                            gradient)
+
         
         self.mean_aggregation()
 
