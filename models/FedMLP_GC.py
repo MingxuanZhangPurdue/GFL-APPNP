@@ -26,7 +26,7 @@ class Node:
         self.X_train, self.y_train = self.X[train_ids], self.y[train_ids]
         self.X_val, self.y_val = self.X[val_ids], self.y[val_ids]
         self.X_test, self.y_test = self.X[test_ids], self.y[test_ids]
-        self.n_train = X_train.shape[0]
+        self.n_train = self.X_train.shape[0]
     
     
     def receieve_central_parameters(self, cmodel):
