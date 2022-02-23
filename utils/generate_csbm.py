@@ -125,7 +125,8 @@ class cSBM:
                 
         elif (method == "GC"):
             
-            bernoulli_p = (self.v_mask+1)/(max(self.v_mask)+2)
+            bernoulli_p = 3*np.ones(self.v.shape[0])/10#(self.v_mask+1)/(max(self.v_mask)+2)
+            bernoulli_p[self.v==1] = 7/10
             
             self.bernoulli_p = bernoulli_p
             
