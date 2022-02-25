@@ -6,48 +6,6 @@ from networkx import adjacency_matrix
 from torch_geometric.utils import to_networkx
 from torch_geometric.data import Data
 
-
-def general_nll_loss(log_yhat, yhot):
-    
-    """
-    yhat: [N, num_class]
-    yhot: target hot tensor, [N, num_class]
-    """
-    
-    y_bool = yhot.type(torch.BoolTensor) if device == "cpu" else yhot.type(torch.cuda.BoolTensor)
-    
-    N, _ = yhot.shape
-    
-    nll_loss = (-1*log_yhat.view(-1))[y_bool.view(-1)].sum()/N
-    
-    return nll_loss
-
-
-def kl_mvn(m0, S0, m1, S1):
-    """
-    Kullback-Liebler divergence from Gaussian pm,pv to Gaussian qm,qv.
-    Also computes KL divergence from a single Gaussian pm,pv to a set
-    of Gaussians qm,qv.
-    
-
-    From wikipedia
-    KL( (m0, S0) || (m1, S1))
-         = .5 * ( tr(S1^{-1} S0) + log |S1|/|S0| + 
-                  (m1 - m0)^T S1^{-1} (m1 - m0) - N )
-    """
-    # store inv diag covariance of S1 and diff between means
-    N = m0.shape[0]
-    iS1 = np.linalg.inv(S1)
-    diff = m1 - m0
-
-    # kl is made of three terms
-    tr_term   = np.trace(iS1 @ S0)
-    det_term  = np.log(np.linalg.det(S1)/np.linalg.det(S0)) #np.sum(np.log(S1)) - np.sum(np.log(S0))
-    quad_term = diff.T @ np.linalg.inv(S1) @ diff #np.sum( (diff*diff) * iS1, axis=1)
-    #print(tr_term,det_term,quad_term)
-    return .5 * (tr_term + det_term + quad_term - N) 
-
-
 def calculate_Atilde(A, K, alpha):
     
     
@@ -57,6 +15,7 @@ def calculate_Atilde(A, K, alpha):
     alpha: jump probability, scalar
     """
     
+    alpha = 1 - alpha
     
     # Number of nodes in this graph
     N = A.shape[0]

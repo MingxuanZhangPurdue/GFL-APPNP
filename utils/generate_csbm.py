@@ -96,21 +96,6 @@ class cSBM:
                 self.ys[i] = torch.tensor(self.v_mask[i]).view(-1).type(torch.LongTensor)
                 
                 
-        elif (method == "SNC_MN"):
-            
-            for i in range(N):
-                
-                cov_vec = np.exp(b[i])
-                
-                X = np.random.multivariate_normal(mean=b[i],
-                                                  cov=np.diag(cov_vec), size=n_local)
-                
-                self.ys[i] = torch.from_numpy(np.repeat(self.v_mask[i], n_local)).type(torch.LongTensor)                
-
-                self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
-            
-                
-                
         elif (method == "SNC"):
             
             for i in range(N):
@@ -123,7 +108,7 @@ class cSBM:
                 self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
                 
                 
-        elif (method == "GC"):
+        elif (method == "SC"):
             
             bernoulli_p = 3*np.ones(self.v.shape[0])/10#(self.v_mask+1)/(max(self.v_mask)+2)
             bernoulli_p[self.v==1] = 7/10
@@ -144,3 +129,6 @@ class cSBM:
                                     
                 X = np.array(X)
                 self.Xs[i] = torch.from_numpy(X).type(torch.FloatTensor)
+                
+        else:
+            raiseValueError("method needs to be SNC, DNC, or SC!")
