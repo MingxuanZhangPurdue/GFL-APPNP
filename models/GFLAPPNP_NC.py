@@ -15,8 +15,8 @@ class Node:
         
         self.model = local_model.to(device)
         self.idx = node_idx
-        self.X = X
-        self.y = y
+        self.X = X.to(device)
+        self.y = y.to(device)
         self.n_local = self.X.shape[0]
         self.data_loader = None
         self.ids_mask = np.ones(N, dtype=bool)
@@ -30,17 +30,23 @@ class Node:
                 param.copy_(cmodel.state_dict()[pname])
                 
                 
-    def upload_information(self, gradient, noise):
+    def upload_information(self, gradient, 
+                           gradient_noise=False,
+                           hidden_noise=False,
+                           gn_std=1, hn_std=1):
         
         x = self.X
         
-        x = x.to(device)
+        #x = x.to(device)
             
         if gradient:
             
             self.model.zero_grad()
         
             h = torch.mean(self.model(x), dim=0, keepdim=True)
+            
+            if hidden_noise:
+                h += hn_std*torch.randn(h.shape).to(device)
             
             num_class = h.shape[-1]
 
@@ -53,19 +59,19 @@ class Node:
                 for pname, param in self.model.named_parameters():
 
                     if pname in dh:
-                        dh[pname].append(param.grad.data.detach().cpu().clone())
+                        dh[pname].append(param.grad.data.cpu().clone()) # removed detach()
                         
                     else:
                         dh[pname] = []
-                        dh[pname].append(param.grad.data.detach().cpu().clone())
+                        dh[pname].append(param.grad.data.cpu().clone()) # removed detach()
 
                     if (i == num_class-1):
                         
                         param_shape = dh[pname][0].shape
                         dh[pname] = torch.cat(dh[pname], dim=0).view((num_class,)+param_shape).to(grad_device)
                         
-                        if noise == True:
-                            dh[pname] += torch.randn(dh[pname].shape).to(grad_device)
+                        if gradient_noise == True:
+                            dh[pname] += gn_std*torch.randn(dh[pname].shape).cpu()
 
                 self.model.zero_grad()
 
@@ -74,6 +80,8 @@ class Node:
         else:
             with torch.no_grad():
                 h = torch.mean(self.model(x), dim=0, keepdim=True)
+                if hidden_noise:
+                    h += hn_std*torch.randn(h.shape).to(device)
                 
             return h, None
     
@@ -104,7 +112,7 @@ class Node:
             for X, y in self.data_loader: 
                 
                 optimizer.zero_grad()
-                X, y = X.to(device), y.to(device)
+                #X, y = X.to(device), y.to(device)
                 H = self.model(X)
                 Z = A_tilde_k_d[k]*H + C_k
                 y_hat = F.softmax(Z, dim=1)
@@ -159,7 +167,6 @@ class Node:
     def cmodel_collect(self, cmodel):
         
         x = self.X
-        x = x.to(device)
         with torch.no_grad():  
             h = torch.mean(cmodel(x), dim=0, keepdims=True)
         return h
@@ -192,7 +199,9 @@ class Central_Server:
         for node in self.node_list:
             node.receieve_central_parameters(self.cmodel)
         
-    def collect_node_information(self, gradient, noise):
+    def collect_node_information(self, gradient=True, 
+                                 gradient_noise=False, hidden_noise=False,
+                                 gn_std=1, hn_std=1):
         
         H = []
         
@@ -203,7 +212,9 @@ class Central_Server:
                 dH[pname] = []
                 
             for i in range(self.N):
-                h_i, dh_i = self.node_list[i].upload_information(gradient, noise)
+                h_i, dh_i = self.node_list[i].upload_information(gradient, 
+                                                                 gradient_noise hidden_noise,
+                                                                 gn_std, hn_std)
                 H.append(h_i)
                 for pname in self.cmodel.state_dict().keys():
                     dH[pname].append(dh_i[pname])
@@ -221,7 +232,9 @@ class Central_Server:
         
         else:
             for i in range(self.N):
-                h_i, _ = self.node_list[i].upload_information(gradient, noise)
+                h_i, _ = self.node_list[i].upload_information(gradient,
+                                                              gradient_noise hidden_noise,
+                                                              gn_std, hn_std)
                 H.append(h_i)
 
             # H: [N, num_class]
@@ -233,19 +246,22 @@ class Central_Server:
         
     def communication(self, 
                       batch_size, learning_rate, I, 
-                      gradient=True, noise=False):
+                      gradient=True, 
+                      gradient_noise=False, hidden_noise=False,
+                      gn_std=1, hn_std=1):
           
         self.broadcast_central_parameters()
         
         # H: [N, num_class]
-        H, dH = self.collect_node_information(gradient, noise)
+        H, dH = self.collect_node_information(gradient,
+                                              gradient_noise hidden_noise,
+                                              gn_std, hn_std)
         
         # C: [N, num_class]
         with torch.no_grad():
             C = torch.matmul(self.A_tilde, H)
         
         for k in self.train_ids:
-            #print (k)
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
             self.node_list[k].local_update(self.A_tilde[k,:], self.A_tilde_gdevice[k,:], C_k, dH, batch_size, learning_rate, I, gradient)
