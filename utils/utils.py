@@ -6,12 +6,12 @@ from networkx import adjacency_matrix
 from torch_geometric.utils import to_networkx
 from torch_geometric.data import Data
 
-def calculate_Atilde(A, K, alpha):
+def calculate_Atilde(A, M, alpha):
     
     
     """
     A: adjacent matrix, numpy array, [N, N]
-    K: number of power iterations, scalar
+    M: number of power iterations, scalar
     alpha: jump probability, scalar
     """
     
@@ -31,16 +31,17 @@ def calculate_Atilde(A, K, alpha):
     A_hat = D_sqrt_inv @ A @ D_sqrt_inv
     
     
-    # Power iteration: A_tilde = (1-\alpha)(\sum_{i=0}^{K} \alpha^{i}\hat{A}^{i})
+    # Power iteration: A_tilde = (1-\alpha)(\sum_{i=0}^{M} \alpha^{i}\hat{A}^{i})
 
     A_tilde = np.zeros((N,N))
     A_hat_i = np.identity(N)
     alpha_i = 1
-    for i in range(0, K+1):
+    for i in range(0, M):
         A_tilde = A_tilde + alpha_i*A_hat_i
         alpha_i = alpha_i*alpha
         A_hat_i = A_hat_i @ A_hat
     A_tilde = (1-alpha)*A_tilde
+    A_tilde = A_tilde + alpha_i*A_hat_i
     
     # A_tilde: [N, N], 2-d float tensor
     return torch.tensor(A_tilde).type(torch.FloatTensor)

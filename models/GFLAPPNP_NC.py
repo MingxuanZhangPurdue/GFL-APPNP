@@ -79,8 +79,9 @@ class Node:
     
 
     
-    def local_update(self, A_tilde_k_d, A_tilde_k_gd, C_k, dH, batch_size,
-                     learning_rate, I, 
+    def local_update(self, A_tilde_k_d, A_tilde_k_gd, 
+                     C_k, dH, 
+                     batch_size, learning_rate, I, 
                      gradient):
         
         if (batch_size > self.n_local):
