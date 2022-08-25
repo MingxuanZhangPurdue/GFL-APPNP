@@ -43,7 +43,9 @@ class Node:
             for pname, param in self.model.named_parameters():
                 param.copy_(cmodel.state_dict()[pname])
                 
-    def upload_information(self, gradient, noise):
+    def upload_information(self, gradient,
+                           hidden_noise, gradient_noise,
+                           hn_std, gn_std):
         
         x = self.X_train #self.X
             
