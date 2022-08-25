@@ -11,10 +11,13 @@ from config import device, grad_device
 
 class Node:
     
-    def __init__(self, local_model, N, node_idx, X, y, n_train, n_val):
+    def __init__(self, local_model, 
+                 N, node_idx, 
+                 X, y, 
+                 n_train, n_val):
         
         
-        self.model = copy.deepcopy(local_model).to(device)
+        self.model = local_model.to(device)
         self.idx = node_idx
         self.n_local = X.shape[0]
         self.train_dataloader = None
@@ -42,7 +45,7 @@ class Node:
                 
     def upload_information(self, gradient, noise):
         
-        x = self.X_train#self.X
+        x = self.X_train #self.X
             
         if gradient:
             

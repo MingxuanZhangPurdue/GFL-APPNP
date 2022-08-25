@@ -61,7 +61,7 @@ def set_up_NC(Xs, ys, initial_model, A_tilde,
         
         node_list.append(node_i)
         
-    server = GFLAPPNP_NC.Central_Server(initial_model, 
+    server = GFLAPPNP_NC.Central_Server(copy.deepcopy(initial_model), 
                                         node_list, A_tilde, 
                                         train_ids, val_ids, test_ids,
                                         gradient,
@@ -80,14 +80,14 @@ def set_up_SC(Xs, ys, initial_model, A_tilde, n_train, n_val, tnc=2):
     
     for i in range(N):
 
-        node_i = GFLAPPNP_SC.Node(local_model=initial_model, 
+        node_i = GFLAPPNP_SC.Node(local_model=copy.deepcopy(initial_model), 
                                   N=N, node_idx=i, 
                                   X=Xs[i], y=ys[i], 
                                   n_train=n_train, n_val=n_val)
 
         node_list.append(node_i)
 
-    server = GFLAPPNP_SC.Central_Server(initial_model, node_list, A_tilde)
+    server = GFLAPPNP_SC.Central_Server(copy.deepcopy(initial_model), node_list, A_tilde)
         
     
     return server

@@ -190,7 +190,7 @@ class Central_Server:
         self.A_tilde_gdevice = A_tilde.to(grad_device)
         self.node_list = node_list
         self.N = len(node_list)
-        self.cmodel = copy.deepcopy(init_model).to(device)
+        self.cmodel = init_model.to(device)
         self.train_ids = train_indices
         self.val_ids = valid_indices
         self.test_ids = test_indices
