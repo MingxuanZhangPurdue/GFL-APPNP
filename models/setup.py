@@ -43,7 +43,11 @@ def set_up_FedMLP_SC(Xs, ys, initial_model, n_train, n_val):
     return server
 
 
-def set_up_NC(Xs, ys, initial_model, A_tilde, train_ids, val_ids, test_ids):
+def set_up_NC(Xs, ys, initial_model, A_tilde, 
+              train_ids, val_ids, test_ids,
+              gradient=True,
+              hidden_noise=False, gradient_noise=False,
+              hn_std=0.1, gn_std=0.01):
     
     N = A_tilde.shape[0]
     
@@ -57,7 +61,12 @@ def set_up_NC(Xs, ys, initial_model, A_tilde, train_ids, val_ids, test_ids):
         
         node_list.append(node_i)
         
-    server = GFLAPPNP_NC.Central_Server(initial_model, node_list, A_tilde, train_ids, val_ids, test_ids)
+    server = GFLAPPNP_NC.Central_Server(initial_model, 
+                                        node_list, A_tilde, 
+                                        train_ids, val_ids, test_ids,
+                                        gradient,
+                                        hidden_noise, gradient_noise,
+                                        hn_std, gn_std)
     
     return server
 

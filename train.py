@@ -19,7 +19,7 @@ Refer to appendix of our paper for a breif recap for csbm and the meaning of cor
 """
 
 # Setup graph structure, i.e. adjacency matrix and node labels
-synthetic_graph = cSBM(N=50, p=100, d=10, mu=1, l=2)
+synthetic_graph = cSBM(N=100, p=100, d=10, mu=1, l=2)
 
 # Setup parameters for data generation, for example, the gaussian vector "u" is drawn by this function.
 synthetic_graph.generate_node_parameters()
@@ -30,12 +30,12 @@ synthetic_graph.generate_node_data(method="DNC", n_local=1)
 
 # Here for simplicity, we use the first 5 nodes as train set, next 5 nodes as valid set, and the rest as test set. According to our theory,
 # you want the subgraph induced by the train set to be connected, however our method works in practice for non-connected train set. And, due to the nature of GNN, you may also want to achieve a good class balance for train set.
-train_ids = np.arange(5)
-val_ids = np.arange(5,10)
-test_ids = np.arange(10,40)
+train_ids = np.arange(10)
+val_ids = np.arange(10,20)
+test_ids = np.arange(20,100)
 
 # We need to get the A_tilde matrix as the graph aggerator for APPNP, refer to appendix for details. Here A represents the adjacency matrix.
-A_tilde = calculate_Atilde(A = synthetic_graph.A, K=10, alpha=0.1)
+A_tilde = calculate_Atilde(A = synthetic_graph.A, M=10, alpha=0.1)
 
 # A base MLP model is needed for APPNP (set bias to False is required).
 init_mlp = MLP(input_dim=100, hidden_dim=64, output_dim=2, bias=False)
@@ -54,7 +54,10 @@ init_mlp = MLP(input_dim=100, hidden_dim=64, output_dim=2, bias=False)
 server_dnc = set_up_NC(Xs = synthetic_graph.Xs, ys=synthetic_graph.ys, 
                        initial_model = init_mlp, 
                        A_tilde=A_tilde, 
-                       train_ids=train_ids, val_ids=val_ids, test_ids=test_ids)
+                       train_ids=train_ids, val_ids=val_ids, test_ids=test_ids,
+                       gradient=True, 
+                       gradient_noise=True, hidden_noise=True,
+                       gn_std=0.01, hn_std=0.01)
 
 
 
@@ -82,10 +85,9 @@ Print: Whether to print out average tain, valid loss and accuacy for each commun
 print_time: If Print is set to True, only print when at communication round t, such that (t mod print_time) = 0.
 """
 # This function will return train loss, train accuracy, val loss, val accuracy calculated at each communication round as list.
-tl_dnc, ta_dnc, vl_dnc, va_dnc = train_NC(server=server_dnc, num_communication=10, 
-                                          batch_size=1, learning_rate=0.5, I=10,
-                                          gradient=True, noise=False, 
-                                          Print=True, print_time=1)
+tl_dnc, ta_dnc, vl_dnc, va_dnc = train_NC(server=server_dnc, num_communication=200, 
+                                          batch_size=1, learning_rate=0.2, I=10,
+                                          Print=True, print_time=10)
 
 
 # After training is completed, call this function to evaluate test loss and accuracy using the model with lowest valid loss.
@@ -94,7 +96,7 @@ print ("For example on stochastic node classification, the test accuracy is", te
 
 
 
-
+'''
 """
 Stochastic Node Classification:
 Here we give an example on how to train our method for stochastic node classification task using synthetic graphs.
@@ -207,7 +209,7 @@ print ("For example on supervised classification, the test accuracy is", test_ac
 
 
 # Thanks for using our code!
-
+'''
 
 
 

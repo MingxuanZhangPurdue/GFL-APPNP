@@ -1,8 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, GATConv, SAGEConv
-from torch_geometric.utils import dropout_adj
+#from torch_geometric.nn import GCNConv, GATConv, SAGEConv
+#from torch_geometric.utils import dropout_adj
 
 
 class MLP(nn.Module):
@@ -24,7 +24,7 @@ class MLP(nn.Module):
         return h
     
 
-
+'''
 class GCN(torch.nn.Module):
     def __init__(self, num_node_features, num_classes, hidden_dimension=64, dropout_prob=0, bias=True):
         
@@ -76,4 +76,4 @@ class SAGE(torch.nn.Module):
         x = F.relu(x)
         x = self.sageconv2(x, edge_index)
         return F.log_softmax(x, dim=1)
-    
+'''   

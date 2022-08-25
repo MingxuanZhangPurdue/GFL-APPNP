@@ -2,9 +2,9 @@ import torch
 import scipy
 import numpy as np
 import scipy.linalg
-from networkx import adjacency_matrix
-from torch_geometric.utils import to_networkx
-from torch_geometric.data import Data
+#from networkx import adjacency_matrix
+#from torch_geometric.utils import to_networkx
+#from torch_geometric.data import Data
 
 def calculate_Atilde(A, M, alpha):
     
@@ -31,7 +31,7 @@ def calculate_Atilde(A, M, alpha):
     A_hat = D_sqrt_inv @ A @ D_sqrt_inv
     
     
-    # Power iteration: A_tilde = (1-\alpha)(\sum_{i=0}^{M} \alpha^{i}\hat{A}^{i})
+    # Power iteration: A_tilde = (1-\alpha)(\sum_{i=0}^{M-1} \alpha^{i}\hat{A}^{i}) + \alpha^{M}\hat{A}^{M}
 
     A_tilde = np.zeros((N,N))
     A_hat_i = np.identity(N)

@@ -71,7 +71,6 @@ def train_SC(server, num_communication,
 
 def train_NC(server, num_communication, 
              batch_size, learning_rate=0.1, I=10,
-             gradient=True, noise=False, 
              Print=False, print_time=1):
     
     train_losses, val_losses = [], []
@@ -79,7 +78,7 @@ def train_NC(server, num_communication,
 
     for ith in range(num_communication):
         
-        train_loss, train_acc, val_loss, val_acc = server.communication(batch_size, learning_rate, I, gradient, noise)
+        train_loss, train_acc, val_loss, val_acc = server.communication(batch_size, learning_rate, I)
         
         train_losses.append(train_loss)
         train_accs.append(train_acc)
