@@ -21,21 +21,20 @@ from torch_geometric.utils import to_networkx
 
 
 parser = argparse.ArgumentParser(description='SubCora experiments.')
-parser.add_argument('--seed_idx', default=0, type=int, help='Which seed to use to generate subCora data.')
 parser.add_argument('--Print', default=True, type=bool, help='Whether to print training stats during training.')
-parser.add_argument('--print_time', default=20, type=int, help='Print stat for each print_time communications.')
+parser.add_argument('--print_time', default=1, type=int, help='Print stat for each print_time communications.')
 
 parser.add_argument('--gradient', default=True, type=bool, help='Share gradient of hidden representation.')
 parser.add_argument('--hidden_noise', default=True, type=bool, help='Add random noise to hidden representation.')
 parser.add_argument('--gradient_noise', default=False, type=bool, help='Add random noise to gradient.')
-parser.add_argument('--hn_std', default=0.1, type=float, help='Standard deviation for hidden noise.')
+parser.add_argument('--hn_std', default=0.01, type=float, help='Standard deviation for hidden noise.')
 parser.add_argument('--gn_std', default=0.01, type=float, help='Standard deviation for gradient noise.')
 parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
 
 
-parser.add_argument('--lr', default=0.01, type=float, help='Learning rate.')
+parser.add_argument('--lr', default=0.02, type=float, help='Learning rate.')
 parser.add_argument('--I', default=10, type=int, help='Number of local updates.')
-parser.add_argument('--nc', default=300, type=int, help='Number of communications.')
+parser.add_argument('--nc', default=10, type=int, help='Number of communications.')
 
 
 args = parser.parse_args()
@@ -115,39 +114,44 @@ if not os.path.exists('experiments/cora/result/GFLAPPNP/'+noise_type+"I"+str(arg
     
 folder_path = 'experiments/cora/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/"
 
-subcora_data, sub_Xs, sub_ys, sub_A, sub_Atilde, train_ids, val_ids, test_ids = generate_subcora(final_seeds[args.seed_idx],
-                                                                                                 final_cc_ids[args.seed_idx],
-                                                                                                 G,
-                                                                                                 cora_data, 
-                                                                                                 Xs, ys, 
-                                                                                                 A,
-                                                                                                 subgraph_size=300)
-torch.manual_seed(0)
-init_mlp = MLP(sub_Xs[0].shape[1], 64, 7, bias=args.bias)
 
-server = set_up_NC(sub_Xs, sub_ys, init_mlp, sub_Atilde, 
-                   train_ids, val_ids, test_ids,
-                   args.gradient,
-                   args.hidden_noise, args.gradient_noise,
-                   args.hn_std, args.gn_std)
+for seed_idx in range(20):
+    
+    print ("Seed:", seed_idx)
 
-tl, ta, vl, va = train_NC(server, args.nc, 1, args.lr, args.I, args.Print, args.print_time)
-   
-np.save(folder_path + "/tl_" + str(args.seed_idx), tl)
-np.save(folder_path + "/ta_" + str(args.seed_idx), ta)
-np.save(folder_path + "/vl_" + str(args.seed_idx), vl)
-np.save(folder_path + "/va_" + str(args.seed_idx), va)
+    subcora_data, sub_Xs, sub_ys, sub_A, sub_Atilde, train_ids, val_ids, test_ids = generate_subcora(final_seeds[seed_idx],
+                                                                                                     final_cc_ids[seed_idx],
+                                                                                                     G,
+                                                                                                     cora_data, 
+                                                                                                     Xs, ys, 
+                                                                                                     A,
+                                                                                                     subgraph_size=300)
+    torch.manual_seed(0)
+    init_mlp = MLP(sub_Xs[0].shape[1], 64, 7, bias=args.bias)
 
-PATH = folder_path + "/model_" + str(args.seed_idx)
+    server = set_up_NC(sub_Xs, sub_ys, init_mlp, sub_Atilde, 
+                       train_ids, val_ids, test_ids,
+                       args.gradient,
+                       args.hidden_noise, args.gradient_noise,
+                       args.hn_std, args.gn_std)
 
-torch.save({
-        'best_model_state_dict': server.best_cmodel.state_dict(),
-        'learning_rate': args.lr,
-        'test_acc': server.eval_test()[1],
-        'model_state_dict': server.cmodel.state_dict(),
-        'best_valloss': server.best_valloss,
-        'best_valacc': server.best_valacc,
-        }, PATH)
+    tl, ta, vl, va = train_NC(server, args.nc, 1, args.lr, args.I, args.Print, args.print_time)
+
+    np.save(folder_path + "/tl_" + str(seed_idx), tl)
+    np.save(folder_path + "/ta_" + str(seed_idx), ta)
+    np.save(folder_path + "/vl_" + str(seed_idx), vl)
+    np.save(folder_path + "/va_" + str(seed_idx), va)
+
+    PATH = folder_path + "/model_" + str(seed_idx)
+
+    torch.save({
+            'best_model_state_dict': server.best_cmodel.state_dict(),
+            'learning_rate': args.lr,
+            'test_acc': server.eval_test()[1],
+            'model_state_dict': server.cmodel.state_dict(),
+            'best_valloss': server.best_valloss,
+            'best_valacc': server.best_valacc,
+            }, PATH)
 
 
 
