@@ -2,9 +2,9 @@ import torch
 import scipy
 import numpy as np
 import scipy.linalg
-#from networkx import adjacency_matrix
-#from torch_geometric.utils import to_networkx
-#from torch_geometric.data import Data
+from networkx import adjacency_matrix
+from torch_geometric.utils import to_networkx
+from torch_geometric.data import Data
 
 def calculate_Atilde(A, M, alpha):
     
