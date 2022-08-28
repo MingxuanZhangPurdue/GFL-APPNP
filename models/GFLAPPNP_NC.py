@@ -191,7 +191,7 @@ class Central_Server:
         self.train_ids = train_indices
         self.val_ids = valid_indices
         self.test_ids = test_indices
-        self.best_cmodel = None
+        self.best_cmodel = copy.deepcopy(init_model).to(device)
         self.best_valloss = np.inf
         self.best_valacc = 0
         self.gradient = gradient
@@ -282,7 +282,7 @@ class Central_Server:
 
         train_loss, train_acc, val_loss, val_acc = self.eval_train_val()
         
-        if (val_loss < self.best_valloss):
+        if (val_acc > self.best_valacc):
             self.best_valloss = val_loss
             self.best_cmodel = copy.deepcopy(self.cmodel)
             self.best_valacc = val_acc

@@ -58,9 +58,7 @@ val_ids = np.load("experiments/DNC/0.78phi/data/valid_ids.npy")
 test_ids = np.load("experiments//DNC/0.78phi/data/test_ids.npy")
 
 
-for i in range(20):
-    
-    print ("ith:", i)
+for i in range(20):  
     
     file_to_open= open("experiments/DNC/0.78phi/data/"+"csbm_"+str(i)+".pickle", "rb")
     csbm = pickle.load(file_to_open)
@@ -69,6 +67,8 @@ for i in range(20):
     
     torch.manual_seed(0)
     init_mlp = MLP(csbm.Xs[0].shape[1], 64, 2, bias=args.bias)
+    
+    print ("ith:", i, torch.cat(csbm.ys)[train_ids].sum())    
 
     server = set_up_NC(csbm.Xs, csbm.ys, init_mlp, A_tilde, 
                        train_ids, val_ids, test_ids,
@@ -85,7 +85,7 @@ for i in range(20):
 
     PATH = folder_path + "/model_" + str(i)
     
-    print (server.eval_test()[1])
+    print (server.eval_test()[1], server.best_valacc)
 
     torch.save({
             'best_model_state_dict': server.best_cmodel.state_dict(),
