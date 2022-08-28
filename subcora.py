@@ -21,11 +21,11 @@ from torch_geometric.utils import to_networkx
 
 
 parser = argparse.ArgumentParser(description='SubCora experiments.')
-parser.add_argument('--Print', default=True, type=bool, help='Whether to print training stats during training.')
+parser.add_argument('--Print', default=False, type=bool, help='Whether to print training stats during training.')
 parser.add_argument('--print_time', default=1, type=int, help='Print stat for each print_time communications.')
 
 parser.add_argument('--gradient', default=True, type=bool, help='Share gradient of hidden representation.')
-parser.add_argument('--hidden_noise', default=True, type=bool, help='Add random noise to hidden representation.')
+parser.add_argument('--hidden_noise', default=False, type=bool, help='Add random noise to hidden representation.')
 parser.add_argument('--gradient_noise', default=False, type=bool, help='Add random noise to gradient.')
 parser.add_argument('--hn_std', default=0.01, type=float, help='Standard deviation for hidden noise.')
 parser.add_argument('--gn_std', default=0.01, type=float, help='Standard deviation for gradient noise.')
@@ -34,7 +34,7 @@ parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
 
 parser.add_argument('--lr', default=0.02, type=float, help='Learning rate.')
 parser.add_argument('--I', default=10, type=int, help='Number of local updates.')
-parser.add_argument('--nc', default=10, type=int, help='Number of communications.')
+parser.add_argument('--nc', default=250, type=int, help='Number of communications.')
 
 
 args = parser.parse_args()
@@ -106,7 +106,7 @@ elif args.hidden_noise and not args.gradient_noise:
 elif not args.hidden_noise and args.gradient_noise:
     noise_type = "g_noise_"+str(args.gn_std)+"/"
 else:
-    raise ValueError("Please specify noise type!")
+    noise_type = "g_noise_"+"test/"
 
 
 if not os.path.exists('experiments/cora/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/"):
@@ -143,6 +143,8 @@ for seed_idx in range(20):
     np.save(folder_path + "/va_" + str(seed_idx), va)
 
     PATH = folder_path + "/model_" + str(seed_idx)
+    
+    print (server.eval_test()[1])
 
     torch.save({
             'best_model_state_dict': server.best_cmodel.state_dict(),
