@@ -1,7 +1,7 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from torch_geometric.nn import GCNConv, GATConv, SAGEConv
+from torch_geometric.nn import GCNConv, GATConv, SAGEConv, APPNP
 from torch_geometric.utils import dropout_adj
 
 

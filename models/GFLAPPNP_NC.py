@@ -32,7 +32,7 @@ class Node:
                 
     def upload_information(self, gradient, 
                            hidden_noise, gradient_noise,
-                           hn_std, gn_noise):
+                           hn_std, gn_std):
         
         x = self.X
         
@@ -168,7 +168,7 @@ class Node:
         with torch.no_grad():  
             h = torch.mean(cmodel(x), dim=0, keepdims=True)
             if hidden_noise:
-                    h += hn_std*torch.randn(h.shape).to(device)
+                h += hn_std*torch.randn(h.shape).to(device)
         return h
         
             
@@ -199,6 +199,14 @@ class Central_Server:
         self.gradient_noise = gradient_noise
         self.hn_std = hn_std
         self.gn_std = gn_std
+        
+        '''
+        print (self.gradient,
+        self.hidden_noise,
+        self.gradient_noise,
+        self.hn_std,
+        self.gn_std)
+        '''
         
         
     def broadcast_central_parameters(self):
