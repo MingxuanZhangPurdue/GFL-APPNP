@@ -11,18 +11,14 @@ import torch.utils.data
 
 class Node:
     
-    def __init__(self, local_model, 
-                 N, node_idx, X, y):
+    def __init__(self, local_model, N, node_idx, X, y):
         
         self.model = local_model.to(device)
-        
         self.idx = node_idx
-        
-        self.X = X.to(device)
-        self.y = y.to(device)
+        self.X = X
+        self.y = y
         self.n_local = self.X.shape[0]
         self.data_loader = None
-        
         self.ids_mask = np.ones(N, dtype=bool)
         self.ids_mask[node_idx] = False
         
@@ -34,12 +30,13 @@ class Node:
                 param.copy_(cmodel.state_dict()[pname])
                 
                 
-    def upload_information(self,
-                           gradient,
+    def upload_information(self, gradient, 
                            hidden_noise, gradient_noise,
-                           hn_std, gn_std):
+                           hn_std, gn_noise):
         
         x = self.X
+        
+        #x = x.to(device)
             
         if gradient:
             
@@ -49,7 +46,7 @@ class Node:
             
             if hidden_noise:
                 h += hn_std*torch.randn(h.shape).to(device)
-                
+            
             num_class = h.shape[-1]
 
             dh = {}
@@ -61,11 +58,11 @@ class Node:
                 for pname, param in self.model.named_parameters():
 
                     if pname in dh:
-                        dh[pname].append(param.grad.data.clone()) # removed detach()
+                        dh[pname].append(param.grad.data.detach().clone())
                         
                     else:
                         dh[pname] = []
-                        dh[pname].append(param.grad.data.clone()) # removed detach()
+                        dh[pname].append(param.grad.data.detach().clone())
 
                     if (i == num_class-1):
                         
@@ -89,9 +86,8 @@ class Node:
     
 
     
-    def local_update(self, A_tilde_k_d, A_tilde_k_gd, 
-                     C_k, dH, 
-                     batch_size, learning_rate, I):
+    def local_update(self, A_tilde_k_d, A_tilde_k_gd, C_k, dH, batch_size,
+                     learning_rate, I):
         
         if (batch_size > self.n_local):
             raise ValueError("batch size should be less or equal to the number of local data points")
@@ -113,6 +109,7 @@ class Node:
             for X, y in self.data_loader: 
                 
                 optimizer.zero_grad()
+                #X, y = X.to(device), y.to(device)
                 H = self.model(X)
                 Z = A_tilde_k_d[k]*H + C_k
                 y_hat = F.softmax(Z, dim=1)
@@ -164,14 +161,14 @@ class Node:
         return loss, acc
     
     
-    def cmodel_collect(self, cmodel,
-                       hidden_noise, hn_std):
+    def cmodel_collect(self, cmodel, hidden_noise, hn_std):
         
         x = self.X
-        with torch.no_grad():
-            h = torch.mean(self.model(x), dim=0, keepdim=True)
+        #x = x.to(device)
+        with torch.no_grad():  
+            h = torch.mean(cmodel(x), dim=0, keepdims=True)
             if hidden_noise:
-                h += hn_std*torch.randn(h.shape).to(device)
+                    h += hn_std*torch.randn(h.shape).to(device)
         return h
         
             
@@ -190,14 +187,13 @@ class Central_Server:
         self.A_tilde_gdevice = A_tilde.to(grad_device)
         self.node_list = node_list
         self.N = len(node_list)
-        self.cmodel = init_model.to(device)
+        self.cmodel = copy.deepcopy(init_model).to(device)
         self.train_ids = train_indices
         self.val_ids = valid_indices
         self.test_ids = test_indices
         self.best_cmodel = None
         self.best_valloss = np.inf
         self.best_valacc = 0
-        
         self.gradient = gradient
         self.hidden_noise = hidden_noise
         self.gradient_noise = gradient_noise
@@ -269,6 +265,7 @@ class Central_Server:
             C = torch.matmul(self.A_tilde, H)
         
         for k in self.train_ids:
+            #print (k)
             with torch.no_grad():
                 C_k = C[k,:] - self.A_tilde[k,k]*H[k,:]
             self.node_list[k].local_update(self.A_tilde[k,:], self.A_tilde_gdevice[k,:], C_k, dH, batch_size, learning_rate, I)
@@ -368,10 +365,3 @@ class Central_Server:
         
         
         return  avg_testloss, avg_testacc
-        
-            
-            
-            
-            
-        
-        

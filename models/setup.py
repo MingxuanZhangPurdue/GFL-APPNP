@@ -47,7 +47,7 @@ def set_up_NC(Xs, ys, initial_model, A_tilde,
               train_ids, val_ids, test_ids,
               gradient=True,
               hidden_noise=False, gradient_noise=False,
-              hn_std=0.1, gn_std=0.01):
+              hn_std=0.01, gn_std=0.01):
     
     N = A_tilde.shape[0]
     
