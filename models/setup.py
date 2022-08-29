@@ -71,7 +71,10 @@ def set_up_NC(Xs, ys, initial_model, A_tilde,
     return server
 
 
-def set_up_SC(Xs, ys, initial_model, A_tilde, n_train, n_val, tnc=2):
+def set_up_SC(Xs, ys, initial_model, A_tilde, n_train, n_val,
+              gradient=True,
+              hidden_noise=False, gradient_noise=False,
+              hn_std=0.01, gn_std=0.01):
     
     N = A_tilde.shape[0]
     
@@ -87,7 +90,10 @@ def set_up_SC(Xs, ys, initial_model, A_tilde, n_train, n_val, tnc=2):
 
         node_list.append(node_i)
 
-    server = GFLAPPNP_SC.Central_Server(copy.deepcopy(initial_model), node_list, A_tilde)
+    server = GFLAPPNP_SC.Central_Server(copy.deepcopy(initial_model), node_list, A_tilde,
+                                        gradient,
+                                        hidden_noise, gradient_noise,
+                                        hn_std, gn_std)
         
     
     return server
