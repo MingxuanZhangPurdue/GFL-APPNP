@@ -15,8 +15,8 @@ class Node:
         
         self.model = local_model.to(device)
         self.idx = node_idx
-        self.X = X
-        self.y = y
+        self.X = X.to(device)
+        self.y = y.to(device)
         self.n_local = self.X.shape[0]
         self.data_loader = None
         self.ids_mask = np.ones(N, dtype=bool)
@@ -35,8 +35,6 @@ class Node:
                            hn_std, gn_std):
         
         x = self.X
-        
-        #x = x.to(device)
             
         if gradient:
             
