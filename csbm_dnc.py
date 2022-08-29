@@ -22,8 +22,8 @@ parser.add_argument('--Print', default=False, type=bool, help='Whether to print 
 parser.add_argument('--print_time', default=10, type=int, help='Print stat for each print_time communications.')
 
 parser.add_argument('--gradient', default=True, type=bool, help='Share gradient of hidden representation.')
-parser.add_argument('--hidden_noise', default=False, type=bool, help='Add random noise to hidden representation.')
-parser.add_argument('--gradient_noise', default=True, type=bool, help='Add random noise to gradient.')
+parser.add_argument('--hidden_noise', default=True, type=bool, help='Add random noise to hidden representation.')
+parser.add_argument('--gradient_noise', default=False, type=bool, help='Add random noise to gradient.')
 parser.add_argument('--hn_std', default=0.01, type=float, help='Standard deviation for hidden noise.')
 parser.add_argument('--gn_std', default=0.01, type=float, help='Standard deviation for gradient noise.')
 parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
@@ -63,7 +63,7 @@ for i in range(20):
     file_to_open= open("experiments/DNC/0.78phi/data/"+"csbm_"+str(i)+".pickle", "rb")
     csbm = pickle.load(file_to_open)
     file_to_open.close()
-    A_tilde = calculate_Atilde(csbm.A, M=10, alpha=0.9)
+    A_tilde = calculate_Atilde(csbm.A, M=10, alpha=0.1)
     
     torch.manual_seed(0)
     init_mlp = MLP(csbm.Xs[0].shape[1], 64, 2, bias=args.bias)

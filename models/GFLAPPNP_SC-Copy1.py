@@ -1,10 +1,12 @@
 import torch
 import time
 import copy
+import multiprocessing
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from joblib import Parallel, delayed
 from config import device, grad_device
 
 class Node:
@@ -45,16 +47,13 @@ class Node:
                            hidden_noise, gradient_noise,
                            hn_std, gn_std):
         
-        x = self.X_train
+        x = self.X_train #self.X
             
         if gradient:
             
             self.model.zero_grad()
         
             h = torch.mean(self.model(x), dim=0, keepdim=True)
-            
-            if hidden_noise:
-                h += hn_std*torch.randn(h.shape).to(device)
             
             num_class = h.shape[-1]
 
@@ -67,19 +66,19 @@ class Node:
                 for pname, param in self.model.named_parameters():
 
                     if pname in dh:
-                        dh[pname].append(param.grad.data.detach().clone())
+                        dh[pname].append(param.grad.data.detach().cpu().clone())
                         
                     else:
                         dh[pname] = []
-                        dh[pname].append(param.grad.data.detach().clone())
+                        dh[pname].append(param.grad.data.detach().cpu().clone())
 
                     if (i == num_class-1):
                         
                         param_shape = dh[pname][0].shape
                         dh[pname] = torch.cat(dh[pname], dim=0).view((num_class,)+param_shape).to(grad_device)
                         
-                        if gradient_noise:
-                            dh[pname] += gn_std*torch.randn(dh[pname].shape).to(grad_device)
+                        if noise == True:
+                            dh[pname] += torch.randn(dh[pname].shape).to(grad_device)
 
                 self.model.zero_grad()
 
@@ -88,15 +87,14 @@ class Node:
         else:
             with torch.no_grad():
                 h = torch.mean(self.model(x), dim=0, keepdim=True)
-                if hidden_noise:
-                    h += hn_std*torch.randn(h.shape).to(device)
                 
             return h, None
     
 
     
     def local_update(self, A_tilde_k_d, A_tilde_k_gd, C_k, dH, batch_size,
-                     learning_rate, I):
+                     learning_rate, I, 
+                     gradient):
         
         if (batch_size > self.n_train):
             raise ValueError("batch size should be less or equal to the number of local data points")
@@ -125,7 +123,7 @@ class Node:
                 Z = A_tilde_k_d[k]*H + C_k
                 y_hat = F.softmax(Z, dim=1)
 
-                if dH != None:
+                if (gradient == True and dH != None):
                     local_loss = F.nll_loss(torch.log(y_hat), y)
                     local_loss.backward()
                     with torch.no_grad():
@@ -148,7 +146,7 @@ class Node:
         
         if mode == "train":
             X, y = self.X_train, self.y_train
-        elif (mode == "val" or mode == "valid"):
+        elif mode == "val":
             X, y = self.X_val, self.y_val
         elif mode == "test":
             X, y = self.X_test, self.y_test
@@ -166,22 +164,17 @@ class Node:
         return loss, acc
     
     
-    def cmodel_collect(self, cmodel, hidden_noise, hn_std):
+    def cmodel_collect(self, cmodel):
         
         x = self.X_train#self.X
         with torch.no_grad():  
             h = torch.mean(cmodel(x), dim=0, keepdims=True)
-            if hidden_noise:
-                h += hn_std*torch.randn(h.shape).to(device)
         return h
     
     
 class Central_Server:
     
-    def __init__(self, model, node_list, A_tilde,
-                 gradient=True,
-                 hidden_noise=False, gradient_noise=False,
-                 hn_std=0.1, gn_std=0.1):
+    def __init__(self, model, node_list, A_tilde):
 
         self.A_tilde = A_tilde.to(device)
         self.A_tilde_gdevice = A_tilde.to(grad_device)
@@ -189,17 +182,11 @@ class Central_Server:
         self.node_list = node_list
         self.N = len(node_list)
         
-        self.cmodel = model.to(device)
+        self.cmodel = copy.deepcopy(model).to(device)
         
         self.best_cmodel = None
         self.best_valloss = np.inf
         self.best_valacc = 0
-        
-        self.gradient = gradient
-        self.hidden_noise = hidden_noise
-        self.gradient_noise = gradient_noise
-        self.hn_std = hn_std
-        self.gn_std = gn_std
         
         
     def broadcast_central_parameters(self):
@@ -207,20 +194,18 @@ class Central_Server:
         for node in self.node_list:
             node.receieve_central_parameters(self.cmodel)
         
-    def collect_node_information(self):
+    def collect_node_information(self, gradient, noise):
         
         H = []
         
-        if self.gradient:
+        if gradient:
             
             dH = {}
             for pname in self.cmodel.state_dict().keys():
                 dH[pname] = []
                 
             for i in range(self.N):
-                h_i, dh_i = self.node_list[i].upload_information(self.gradient,
-                                                                 self.hidden_noise, self.gradient_noise,
-                                                                 self.hn_std, self.gn_std)
+                h_i, dh_i = self.node_list[i].upload_information(gradient, noise)
                 H.append(h_i)
                 for pname in self.cmodel.state_dict().keys():
                     dH[pname].append(dh_i[pname])
@@ -238,9 +223,7 @@ class Central_Server:
         
         else:
             for i in range(self.N):
-                h_i, _ = self.node_list[i].upload_information(self.gradient,
-                                                              self.hidden_noise, self.gradient_noise,
-                                                              self.hn_std, self.gn_std)
+                h_i, _ = self.node_list[i].upload_information(gradient, noise)
                 H.append(h_i)
 
             # H: [N, num_class]
@@ -250,12 +233,13 @@ class Central_Server:
                     
         
     def communication(self, 
-                      batch_size, learning_rate, I):
+                      batch_size, learning_rate, I, 
+                      gradient=True, noise=False):
           
         self.broadcast_central_parameters()
         
         # H: [N, num_class]
-        H, dH = self.collect_node_information()
+        H, dH = self.collect_node_information(gradient, noise)
         
         # C: [N, num_class]
         with torch.no_grad():
@@ -269,7 +253,8 @@ class Central_Server:
             self.node_list[k].local_update(self.A_tilde[k,:], self.A_tilde_gdevice[k,:], 
                                            C_k, dH, 
                                            batch_size, learning_rate, 
-                                           I)
+                                           I, 
+                                           gradient)
 
         
         self.mean_aggregation()
@@ -277,11 +262,6 @@ class Central_Server:
         train_loss, train_acc, val_loss, val_acc = self.eval_train_val()
         
         if (val_loss < self.best_valloss):
-            self.best_valloss = val_loss
-            self.best_cmodel = copy.deepcopy(self.cmodel)
-            self.best_valacc = val_acc
-            
-        elif (val_loss == self.best_valloss and val_acc > self.best_valacc):
             self.best_valloss = val_loss
             self.best_cmodel = copy.deepcopy(self.cmodel)
             self.best_valacc = val_acc
@@ -317,7 +297,7 @@ class Central_Server:
         
         H = []
         for i in range(self.N):
-            H.append(self.node_list[i].cmodel_collect(self.cmodel, self.hidden_noise, self.hn_std))
+            H.append(self.node_list[i].cmodel_collect(self.cmodel))
         H = torch.cat(H, dim=0)
             
         with torch.no_grad():
@@ -348,7 +328,7 @@ class Central_Server:
         
         H = []
         for i in range(self.N):
-            H.append(self.node_list[i].cmodel_collect(self.best_cmodel, self.hidden_noise, self.hn_std))
+            H.append(self.node_list[i].cmodel_collect(self.best_cmodel))
         H = torch.cat(H, dim=0)
             
         with torch.no_grad():
