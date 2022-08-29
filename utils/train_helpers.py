@@ -102,6 +102,7 @@ def train_pyg_model(pyg_data,
     device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
     
     data = pyg_data.to(device)
+    model = model.to(device)
     train_losses, train_accs, val_losses, val_accs = [], [], [], []
     best_model = None
     best_valloss = np.inf
