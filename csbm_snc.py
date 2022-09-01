@@ -17,14 +17,15 @@ import argparse
 import os
 
 
-parser = argparse.ArgumentParser(description='cSBM DNC experiments.')
+parser = argparse.ArgumentParser(description='cSBM SNC experiments.')
 parser.add_argument('--Print', default=False, type=bool, help='Whether to print training stats during training.')
 parser.add_argument('--print_time', default=10, type=int, help='Print stat for each print_time communications.')
 
 parser.add_argument('--gradient', default=True, type=bool, help='Share gradient of hidden representation.')
+parser.add_argument('--batchsize', default=40, type=int, help='Batch size for local updates.')
 parser.add_argument('--hidden_noise', default=True, type=bool, help='Add random noise to hidden representation.')
 parser.add_argument('--gradient_noise', default=False, type=bool, help='Add random noise to gradient.')
-parser.add_argument('--hn_std', default=0.1, type=float, help='Standard deviation for hidden noise.')
+parser.add_argument('--hn_std', default=1, type=float, help='Standard deviation for hidden noise.')
 parser.add_argument('--gn_std', default=0.01, type=float, help='Standard deviation for gradient noise.')
 parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
 
@@ -46,21 +47,21 @@ else:
     noise_type = "test/"
 
 
-if not os.path.exists('experiments/DNC/0.78phi/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/"):
-    os.makedirs('experiments/DNC/0.78phi/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/")
+if not os.path.exists('experiments/SNC/0.78phi/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/"):
+    os.makedirs('experiments/SNC/0.78phi/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/")
     
-folder_path = 'experiments/DNC/0.78phi/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/"
+folder_path = 'experiments/SNC/0.78phi/result/GFLAPPNP/'+noise_type+"I"+str(args.I)+"/"
 
 import sys
 sys.path.append('utils/')
-train_ids = np.load("experiments/DNC/0.78phi/data/train_ids.npy")
-val_ids = np.load("experiments/DNC/0.78phi/data/valid_ids.npy")
-test_ids = np.load("experiments//DNC/0.78phi/data/test_ids.npy")
+train_ids = np.load("experiments/SNC/0.78phi/data/train_ids.npy")
+val_ids = np.load("experiments/SNC/0.78phi/data/val_ids.npy")
+test_ids = np.load("experiments/SNC/0.78phi/data/test_ids.npy")
 
 
 for i in range(20):  
     
-    file_to_open= open("experiments/DNC/0.78phi/data/"+"csbm_"+str(i)+".pickle", "rb")
+    file_to_open= open("experiments/SNC/0.78phi/data/"+"csbm_"+str(i)+".pickle", "rb")
     csbm = pickle.load(file_to_open)
     file_to_open.close()
     A_tilde = calculate_Atilde(csbm.A, M=10, alpha=0.1)
@@ -76,7 +77,7 @@ for i in range(20):
                        args.hidden_noise, args.gradient_noise,
                        args.hn_std, args.gn_std)
 
-    tl, ta, vl, va = train_NC(server, args.nc, 1, args.lr, args.I, args.Print, args.print_time)
+    tl, ta, vl, va = train_NC(server, args.nc, args.batchsize, args.lr, args.I, args.Print, args.print_time)
 
     np.save(folder_path + "/tl_" + str(i), tl)
     np.save(folder_path + "/ta_" + str(i), ta)
