@@ -25,7 +25,7 @@ parser.add_argument('--gradient', default=True, type=bool, help='Share gradient 
 parser.add_argument('--hidden_noise', default=True, type=bool, help='Add random noise to hidden representation.')
 parser.add_argument('--gradient_noise', default=False, type=bool, help='Add random noise to gradient.')
 parser.add_argument('--hn_std', default=0.1, type=float, help='Standard deviation for hidden noise.')
-parser.add_argument('--gn_std', default=0.01, type=float, help='Standard deviation for gradient noise.')
+parser.add_argument('--gn_std', default=1, type=float, help='Standard deviation for gradient noise.')
 parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
 
 
