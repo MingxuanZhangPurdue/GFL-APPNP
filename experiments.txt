@@ -1,0 +1,5 @@
+# For SC:
+
+I = 10, hg_noise_1_1, lowered the learning rate from 0.2 to 0.1
+
+I = 10, h_noise_1, lowered the learning rate from 0.2 to 0.1
