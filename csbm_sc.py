@@ -33,9 +33,9 @@ parser.add_argument('--gn_std', default=1, type=float, help='Standard deviation 
 parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
 
 
-parser.add_argument('--lr', default=0.05, type=float, help='Learning rate.')
+parser.add_argument('--lr', default=0.06, type=float, help='Learning rate.')
 parser.add_argument('--I', default=10, type=int, help='Number of local updates.')
-parser.add_argument('--nc', default=400, type=int, help='Number of communications.')
+parser.add_argument('--nc', default=500, type=int, help='Number of communications.')
 
 
 args = parser.parse_args()
