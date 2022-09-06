@@ -162,7 +162,6 @@ class Node:
     def cmodel_collect(self, cmodel, hidden_noise, hn_std):
         
         x = self.X
-        #x = x.to(device)
         with torch.no_grad():  
             h = torch.mean(cmodel(x), dim=0, keepdims=True)
             if hidden_noise:
