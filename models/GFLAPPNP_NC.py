@@ -196,7 +196,7 @@ class Central_Server:
         self.gradient_noise = gradient_noise
         self.hn_std = hn_std
         self.gn_std = gn_std
-        
+
         '''
         print (self.gradient,
         self.hidden_noise,
