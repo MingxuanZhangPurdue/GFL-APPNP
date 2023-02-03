@@ -21,13 +21,13 @@ parser = argparse.ArgumentParser(description='cSBM SNC experiments.')
 parser.add_argument('--Print', default=False, type=bool, help='Whether to print training stats during training.')
 parser.add_argument('--print_time', default=10, type=int, help='Print stat for each print_time communications.')
 
-parser.add_argument('--gradient', default=True, type=bool, help='Share gradient of hidden representation.')
 parser.add_argument('--batchsize', default=40, type=int, help='Batch size for local updates.')
-parser.add_argument('--hidden_noise', default=True, type=bool, help='Add random noise to hidden representation.')
-parser.add_argument('--gradient_noise', default=True, type=bool, help='Add random noise to gradient.')
 parser.add_argument('--hn_std', default=0.1, type=float, help='Standard deviation for hidden noise.')
 parser.add_argument('--gn_std', default=0.1, type=float, help='Standard deviation for gradient noise.')
-parser.add_argument('--bias', default=False, type=bool, help='Bias in MLP.')
+parser.add_argument('--bias', action='store_true', default=False, help='Bias in MLP.')
+parser.add_argument('--gradient', action='store_true', default=False, help='Share gradients of hidden representation.')
+parser.add_argument('--hidden_noise', action='store_true', default=False, help='Add random noise to hidden representation.')
+parser.add_argument('--gradient_noise', action='store_true', default=False, help='Add random noise to gradient.')
 
 
 parser.add_argument('--lr', default=0.2, type=float, help='Learning rate.')
